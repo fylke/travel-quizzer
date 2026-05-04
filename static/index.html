@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Quiz - Guess the Destination</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="screen">
+            <div class="welcome-content">
+                <h1>✈️ Travel Quiz</h1>
+                <p>Guess the travel destination based on the hint and images!</p>
+                <p class="subtitle">Earlier guesses earn more points</p>
+                
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="playerName" 
+                        placeholder="Enter your name" 
+                        maxlength="20"
+                    >
+                    <button onclick="startQuiz()" class="btn btn-primary">Start Quiz</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quizScreen" class="screen hidden">
+            <div class="quiz-header">
+                <div class="progress-info">
+                    <span>Question <span id="currentQuestion">1</span> of 5</span>
+                    <span id="scoreDisplay">Score: 0</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+            </div>
+
+            <div class="quiz-content">
+                <div class="hint-section">
+                    <h2 id="hint"></h2>
+                </div>
+
+                <div class="images-section">
+                    <div class="image-container">
+                        <img id="image1" src="" alt="Destination image 1" class="quiz-image">
+                    </div>
+                    <div class="image-container">
+                        <img id="image2" src="" alt="Destination image 2" class="quiz-image">
+                    </div>
+                </div>
+
+                <div class="timer-section">
+                    <div class="timer-display">
+                        <div id="timer" class="timer">30</div>
+                        <p>seconds remaining</p>
+                    </div>
+                </div>
+
+                <div class="answer-section">
+                    <input 
+                        type="text" 
+                        id="answerInput" 
+                        placeholder="Enter the destination" 
+                        autocomplete="off"
+                    >
+                    <button onclick="submitAnswer()" class="btn btn-primary">Submit Answer</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Answer Feedback Screen -->
+        <div id="feedbackScreen" class="screen hidden">
+            <div class="feedback-content">
+                <div id="feedbackStatus" class="feedback-status"></div>
+                <div id="feedbackDetails" class="feedback-details"></div>
+                <button onclick="nextQuestion()" class="btn btn-primary">Next Question</button>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="resultsScreen" class="screen hidden">
+            <div class="results-content">
+                <h1>Quiz Complete! 🎉</h1>
+                <div class="final-score">
+                    <p>Your Score</p>
+                    <p id="finalScore" class="score-number">0</p>
+                </div>
+                <div class="results-details">
+                    <p id="resultsMessage"></p>
+                </div>
+                <div class="button-group">
+                    <button onclick="retakeQuiz()" class="btn btn-primary">Retake Quiz</button>
+                    <button onclick="resetQuiz()" class="btn btn-secondary">Back to Start</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
