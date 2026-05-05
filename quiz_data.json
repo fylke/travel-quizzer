@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "destination": "tokyo",
+    "hint": "This bustling metropolis is known for its neon lights, traditional temples, and being one of the largest metropolitan areas in the world.",
+    "images": [
+      "https://picsum.photos/400/300?random=1",
+      "https://picsum.photos/400/300?random=2"
+    ],
+    "correct_answers": ["tokyo", "japan", "tokyo japan"]
+  },
+  {
+    "id": 2,
+    "destination": "paris",
+    "hint": "The City of Light is famous for the Eiffel Tower, world-class museums, and being considered the romantic capital of Europe.",
+    "images": [
+      "https://picsum.photos/400/300?random=3",
+      "https://picsum.photos/400/300?random=4"
+    ],
+    "correct_answers": ["paris", "france", "paris france"]
+  },
+  {
+    "id": 3,
+    "destination": "new york",
+    "hint": "The city that never sleeps is home to the Statue of Liberty, Times Square, and is the financial heart of the United States.",
+    "images": [
+      "https://picsum.photos/400/300?random=5",
+      "https://picsum.photos/400/300?random=6"
+    ],
+    "correct_answers": ["new york", "usa", "united states", "new york city", "nyc"]
+  },
+  {
+    "id": 4,
+    "destination": "sydney",
+    "hint": "This Australian city is famous for its Opera House, beautiful beaches, and iconic Sydney Harbour Bridge.",
+    "images": [
+      "https://picsum.photos/400/300?random=7",
+      "https://picsum.photos/400/300?random=8"
+    ],
+    "correct_answers": ["sydney", "australia"]
+  },
+  {
+    "id": 5,
+    "destination": "rome",
+    "hint": "The Eternal City is home to the Colosseum, Vatican, and countless historical ruins from ancient times.",
+    "images": [
+      "https://picsum.photos/400/300?random=9",
+      "https://picsum.photos/400/300?random=10"
+    ],
+    "correct_answers": ["rome", "italy", "rome italy"]
+  }
+]

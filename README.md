@@ -7,17 +7,15 @@ A fun interactive quiz game where you guess travel destinations based on hints a
 - **5 Travel Destinations** to guess: Tokyo, Paris, New York, Sydney, and Rome
 - **2 Images per Question** to help with identification
 - **Hint System** with descriptive clues about each destination
-- **Dynamic Scoring** - faster correct guesses earn more points (max 100 per question)
-- **30-second Timer** per question with visual countdown
+- **Simple Scoring** - 100 points for correct answers, 0 for incorrect
 - **Responsive Design** - works on desktop and mobile devices
 - **Real-time Feedback** - instant answer validation with points calculation
 
 ## Scoring System
 
-- **Maximum Points**: 100 points per question (500 total)
-- **Time-based**: Points decrease as time runs out
-- **Formula**: 100 - (30 - secondsRemaining) × 3 (minimum 10 points if correct)
+- **Correct Answer**: 100 points per question (500 total)
 - **Wrong Answer**: 0 points
+- **Simple and Fair**: No time pressure, focus on knowledge
 
 ## Project Structure
 
@@ -236,22 +234,22 @@ Edit the `quiz_data` list in `main.py` to add more travel destinations:
 ```
 
 ### Change Timer Duration
-Modify the time in `static/script.js`:
-```javascript
-quizState.timeRemaining = 30; // Change to your desired seconds
-```
+The timer has been removed for a simpler experience. All correct answers receive 100 points.
 
 ### Adjust Scoring Formula
-Edit the scoring calculation in `main.py`:
+Currently set to 100 points for correct answers, 0 for incorrect. Modify in `main.py`:
 ```python
-points = max(10, int(100 - (max_time - time_remaining) * 3))
+if is_correct:
+    points = 100  # Change this value for different scoring
+else:
+    points = 0
 ```
 
 ## Technologies Used
 
 - **Backend**: Flask (Python web framework)
 - **Frontend**: Vanilla JavaScript, HTML5, CSS3
-- **Images**: Unsplash API (for demo images)
+- **Images**: Picsum (free placeholder images)
 - **CORS**: Flask-CORS for cross-origin requests
 
 ## Browser Compatibility

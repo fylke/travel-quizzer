@@ -88,6 +88,12 @@ body {
     border-color: #667eea;
 }
 
+.loading-message {
+    margin-top: 20px;
+    color: #666;
+    font-size: 0.9em;
+}
+
 /* Quiz Screen */
 .quiz-header {
     margin-bottom: 30px;
@@ -155,41 +161,6 @@ body {
     .quiz-image {
         height: 200px;
     }
-}
-
-.timer-section {
-    display: flex;
-    justify-content: center;
-}
-
-.timer-display {
-    text-align: center;
-}
-
-.timer {
-    font-size: 3em;
-    font-weight: bold;
-    color: #667eea;
-    margin-bottom: 5px;
-}
-
-.timer.warning {
-    color: #ff9800;
-}
-
-.timer.danger {
-    color: #f44336;
-    animation: pulse 0.5s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
-.timer-display p {
-    color: #666;
-    font-size: 0.9em;
 }
 
 .answer-section {

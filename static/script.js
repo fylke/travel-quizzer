@@ -4,21 +4,31 @@ let quizState = {
     totalScore: 0,
     playerName: '',
     questions: [],
-    timeRemaining: 30,
-    timerInterval: null,
-    answered: false
+    answered: false,
+    quizLoaded: false
 };
 
-const API_BASE = 'http://localhost:5000';
+const API_BASE = window.location.origin;
 
 // Initialize quiz
 async function loadQuiz() {
+    const loadingMessage = document.getElementById('loadingMessage');
+    const startButton = document.getElementById('startButton');
+    
+    loadingMessage.style.display = 'block';
+    startButton.disabled = true;
+    
     try {
         const response = await fetch(`${API_BASE}/api/quiz`);
         quizState.questions = await response.json();
+        quizState.quizLoaded = true;
+        
+        loadingMessage.style.display = 'none';
+        startButton.disabled = false;
     } catch (error) {
         console.error('Error loading quiz:', error);
-        alert('Failed to load quiz. Make sure the server is running on http://localhost:5000');
+        loadingMessage.textContent = 'Failed to load quiz. Please refresh the page.';
+        loadingMessage.style.color = 'red';
     }
 }
 
@@ -30,13 +40,17 @@ function startQuiz() {
         return;
     }
     
+    if (!quizState.quizLoaded) {
+        alert('Quiz is still loading. Please wait a moment and try again.');
+        return;
+    }
+    
     quizState.playerName = playerName;
     quizState.currentQuestion = 0;
     quizState.totalScore = 0;
     
     showScreen('quizScreen');
     loadQuestion();
-    startTimer();
 }
 
 function showScreen(screenId) {
@@ -62,59 +76,21 @@ function loadQuestion() {
     document.getElementById('progressFill').style.width = progressPercent + '%';
     
     // Load question content
+    console.log('Loading question:', question);
     document.getElementById('hint').textContent = question.hint;
     document.getElementById('image1').src = question.images[0];
     document.getElementById('image2').src = question.images[1];
     document.getElementById('answerInput').value = '';
     document.getElementById('answerInput').focus();
     
-    // Reset timer
-    quizState.timeRemaining = 30;
+    // Reset answered state
     quizState.answered = false;
-    updateTimerDisplay();
-    startTimer();
-}
-
-function startTimer() {
-    // Clear existing timer
-    if (quizState.timerInterval) {
-        clearInterval(quizState.timerInterval);
-    }
-    
-    quizState.timerInterval = setInterval(() => {
-        quizState.timeRemaining--;
-        updateTimerDisplay();
-        
-        if (quizState.timeRemaining <= 0) {
-            clearInterval(quizState.timerInterval);
-            if (!quizState.answered) {
-                showFeedback(false, 0);
-            }
-        }
-    }, 1000);
-}
-
-function updateTimerDisplay() {
-    const timerElement = document.getElementById('timer');
-    timerElement.textContent = quizState.timeRemaining;
-    
-    // Change color based on time remaining
-    if (quizState.timeRemaining <= 5) {
-        timerElement.classList.add('danger');
-        timerElement.classList.remove('warning');
-    } else if (quizState.timeRemaining <= 10) {
-        timerElement.classList.add('warning');
-        timerElement.classList.remove('danger');
-    } else {
-        timerElement.classList.remove('warning', 'danger');
-    }
 }
 
 async function submitAnswer() {
     if (quizState.answered) return;
     
     quizState.answered = true;
-    clearInterval(quizState.timerInterval);
     
     const answerInput = document.getElementById('answerInput');
     const userAnswer = answerInput.value.trim();
@@ -134,7 +110,7 @@ async function submitAnswer() {
             body: JSON.stringify({
                 questionId: quizState.questions[quizState.currentQuestion].id,
                 answer: userAnswer,
-                timeRemaining: quizState.timeRemaining
+                timeRemaining: 30  // Always give maximum time for scoring
             })
         });
         

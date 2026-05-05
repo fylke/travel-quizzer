@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Travel Quiz - Guess the Destination</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="container">
@@ -13,7 +13,7 @@
             <div class="welcome-content">
                 <h1>✈️ Travel Quiz</h1>
                 <p>Guess the travel destination based on the hint and images!</p>
-                <p class="subtitle">Earlier guesses earn more points</p>
+                <p class="subtitle">Test your travel knowledge</p>
                 
                 <div class="input-group">
                     <input 
@@ -22,7 +22,10 @@
                         placeholder="Enter your name" 
                         maxlength="20"
                     >
-                    <button onclick="startQuiz()" class="btn btn-primary">Start Quiz</button>
+                    <button onclick="startQuiz()" class="btn btn-primary" id="startButton">Start Quiz</button>
+                </div>
+                <div id="loadingMessage" class="loading-message" style="display: none;">
+                    Loading quiz...
                 </div>
             </div>
         </div>
@@ -50,13 +53,6 @@
                     </div>
                     <div class="image-container">
                         <img id="image2" src="" alt="Destination image 2" class="quiz-image">
-                    </div>
-                </div>
-
-                <div class="timer-section">
-                    <div class="timer-display">
-                        <div id="timer" class="timer">30</div>
-                        <p>seconds remaining</p>
                     </div>
                 </div>
 
@@ -100,6 +96,6 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="/static/script.js"></script>
 </body>
 </html>
