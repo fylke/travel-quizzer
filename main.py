@@ -32,7 +32,8 @@ def check_answer():
     data = request.json
     question_id = data.get('questionId')
     user_answer = data.get('answer', '').lower().strip()
-    hint_index = data.get('hintIndex', 0)
+    hint_difficulty = data.get('hintDifficulty', 0)
+    remaining_guesses = data.get('remainingGuesses', 1)
     
     # Find the question
     question = next((q for q in quiz_data if q['id'] == question_id), None)
@@ -40,14 +41,10 @@ def check_answer():
     if not question:
         return jsonify({"error": "Question not found"}), 404
     
-    # Check if answer is correct
     is_correct = user_answer in question['correct_answers']
     
-    points_by_hint = [100, 80, 60, 40, 20]
-    index = min(max(int(hint_index), 0), len(points_by_hint) - 1)
-    
     if is_correct:
-        points = points_by_hint[index]
+        points = hint_difficulty * remaining_guesses
     else:
         points = 0
     

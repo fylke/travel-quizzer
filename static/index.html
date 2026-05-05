@@ -44,10 +44,6 @@
 
             <div class="quiz-content">
                 <div class="hint-section">
-                    <div class="hint-meta">
-                        <span id="hintProgress"></span>
-                        <span id="hintPoints"></span>
-                    </div>
                     <h2 id="hint"></h2>
                 </div>
 
@@ -59,6 +55,10 @@
                         <img id="image2" src="" alt="Destination image 2" class="quiz-image">
                     </div>
                 </div>
+                <div class="hint-meta">
+                    <span id="hintProgress"></span>
+                    <span id="hintPoints"></span>
+                </div>
 
                 <div class="answer-section">
                     <input 
@@ -67,7 +67,10 @@
                         placeholder="Enter the destination" 
                         autocomplete="off"
                     >
-                    <button onclick="submitAnswer()" class="btn btn-primary">Submit Answer</button>
+                    <div class="button-group">
+                        <button onclick="submitAnswer()" class="btn btn-primary">Submit Answer</button>
+                        <button onclick="skipHint()" class="btn btn-secondary">Skip Hint</button>
+                    </div>
                 </div>
             </div>
         </div>

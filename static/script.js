@@ -1,7 +1,8 @@
 // Quiz State
 let quizState = {
     currentQuestion: 0,
-    currentHintIndex: 0,
+    hintDifficulty: 5,
+    remainingGuesses: 3,
     totalScore: 0,
     playerName: '',
     questions: [],
@@ -9,7 +10,6 @@ let quizState = {
     quizLoaded: false
 };
 
-const POINT_VALUES = [100, 80, 60, 40, 20];
 const API_BASE = window.location.origin;
 
 async function loadQuiz() {
@@ -77,7 +77,8 @@ function loadQuestion() {
     document.getElementById('progressFill').style.width = progressPercent + '%';
     
     console.log('Loading question:', question);
-    quizState.currentHintIndex = 0;
+    quizState.hintDifficulty = 5;
+    quizState.remainingGuesses = 3;
     updateHintDisplay(question);
     document.getElementById('image1').src = question.images[0];
     document.getElementById('image2').src = question.images[1];
@@ -88,13 +89,13 @@ function loadQuestion() {
 }
 
 function updateHintDisplay(question) {
-    const currentIndex = quizState.currentHintIndex;
-    const totalHints = question.hints?.length || 1;
-    const hintText = question.hints?.[currentIndex] || question.hint || '';
+    const hintDifficulty = quizState.hintDifficulty;
+    const hintText = question.hints?.[hintDifficulty - 1] || question.hint || '';
+    const potentialPoints = hintDifficulty * quizState.remainingGuesses;
 
     document.getElementById('hint').textContent = hintText;
-    document.getElementById('hintProgress').textContent = `Hint ${currentIndex + 1} of ${totalHints}`;
-    document.getElementById('hintPoints').textContent = `Worth ${POINT_VALUES[currentIndex] || POINT_VALUES[POINT_VALUES.length - 1]} points`;
+    document.getElementById('hintProgress').textContent = `Hint difficulty is ${hintDifficulty}, and you have ${quizState.remainingGuesses} remaining guesses.`;
+    document.getElementById('hintPoints').textContent = `If you guess correctly, you will get ${potentialPoints} points.`;
 }
 
 async function submitAnswer() {
@@ -120,7 +121,8 @@ async function submitAnswer() {
             body: JSON.stringify({
                 questionId: quizState.questions[quizState.currentQuestion].id,
                 answer: userAnswer,
-                hintIndex: quizState.currentHintIndex
+                hintDifficulty: quizState.hintDifficulty,
+                remainingGuesses: quizState.remainingGuesses
             })
         });
         
@@ -131,13 +133,12 @@ async function submitAnswer() {
             quizState.totalScore += result.points;
             showFeedback(true, result.points, result.answer);
         } else {
-            if (quizState.currentHintIndex < (question.hints?.length || 1) - 1) {
-                quizState.currentHintIndex++;
+            if (quizState.remainingGuesses > 0) {
+                quizState.remainingGuesses--;
                 updateHintDisplay(question);
                 answerInput.value = '';
                 answerInput.focus();
                 quizState.answered = false;
-                alert('Incorrect. Here is the next hint.');
             } else {
                 showFeedback(false, 0, result.answer);
             }
@@ -146,6 +147,20 @@ async function submitAnswer() {
         console.error('Error checking answer:', error);
         alert('Error checking answer');
         quizState.answered = false;
+    }
+}
+
+function skipHint() {
+    const question = quizState.questions[quizState.currentQuestion];
+    
+    if (quizState.hintDifficulty > 1) {
+        quizState.hintDifficulty--;
+        updateHintDisplay(question);
+        document.getElementById('answerInput').value = '';
+        document.getElementById('answerInput').focus();
+    } else {
+        // If no more hints, show feedback as incorrect
+        showFeedback(false, 0, question.destination);
     }
 }
 

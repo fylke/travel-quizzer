@@ -29,20 +29,24 @@ class MainAppTestCase(unittest.TestCase):
         question = quiz_data[0]
         response = self.client.post('/api/check-answer', json={
             'questionId': question['id'],
-            'answer': question['correct_answers'][0]
+            'answer': question['correct_answers'][0],
+            'hintIndex': 5,
+            'guessIndex': 3
         })
         self.assertEqual(response.status_code, 200)
 
         data = response.get_json()
         self.assertTrue(data['correct'])
-        self.assertEqual(data['points'], 100)
+        self.assertEqual(data['points'], 15)  # Hint difficulty * Remaining guesses
         self.assertEqual(data['answer'], question['destination'])
 
     def test_check_answer_returns_incorrect_for_invalid_answer(self):
         question = quiz_data[0]
         response = self.client.post('/api/check-answer', json={
             'questionId': question['id'],
-            'answer': 'not a valid place'
+            'answer': 'not a valid place',
+            'hintIndex': 0,
+            'guessIndex': 1
         })
         self.assertEqual(response.status_code, 200)
 
