@@ -1,6 +1,7 @@
 // Quiz State
 let quizState = {
     currentQuestion: 0,
+    currentHintIndex: 0,
     totalScore: 0,
     playerName: '',
     questions: [],
@@ -8,6 +9,7 @@ let quizState = {
     quizLoaded: false
 };
 
+const POINT_VALUES = [100, 80, 60, 40, 20];
 const API_BASE = window.location.origin;
 
 async function loadQuiz() {
@@ -75,13 +77,24 @@ function loadQuestion() {
     document.getElementById('progressFill').style.width = progressPercent + '%';
     
     console.log('Loading question:', question);
-    document.getElementById('hint').textContent = question.hint;
+    quizState.currentHintIndex = 0;
+    updateHintDisplay(question);
     document.getElementById('image1').src = question.images[0];
     document.getElementById('image2').src = question.images[1];
     document.getElementById('answerInput').value = '';
     document.getElementById('answerInput').focus();
     
     quizState.answered = false;
+}
+
+function updateHintDisplay(question) {
+    const currentIndex = quizState.currentHintIndex;
+    const totalHints = question.hints?.length || 1;
+    const hintText = question.hints?.[currentIndex] || question.hint || '';
+
+    document.getElementById('hint').textContent = hintText;
+    document.getElementById('hintProgress').textContent = `Hint ${currentIndex + 1} of ${totalHints}`;
+    document.getElementById('hintPoints').textContent = `Worth ${POINT_VALUES[currentIndex] || POINT_VALUES[POINT_VALUES.length - 1]} points`;
 }
 
 async function submitAnswer() {
@@ -106,17 +119,28 @@ async function submitAnswer() {
             },
             body: JSON.stringify({
                 questionId: quizState.questions[quizState.currentQuestion].id,
-                answer: userAnswer
+                answer: userAnswer,
+                hintIndex: quizState.currentHintIndex
             })
         });
         
         const result = await response.json();
+        const question = quizState.questions[quizState.currentQuestion];
         
         if (result.correct) {
             quizState.totalScore += result.points;
             showFeedback(true, result.points, result.answer);
         } else {
-            showFeedback(false, 0, result.answer);
+            if (quizState.currentHintIndex < (question.hints?.length || 1) - 1) {
+                quizState.currentHintIndex++;
+                updateHintDisplay(question);
+                answerInput.value = '';
+                answerInput.focus();
+                quizState.answered = false;
+                alert('Incorrect. Here is the next hint.');
+            } else {
+                showFeedback(false, 0, result.answer);
+            }
         }
     } catch (error) {
         console.error('Error checking answer:', error);

@@ -19,7 +19,9 @@ class MainAppTestCase(unittest.TestCase):
         question = data[0]
         self.assertIn('id', question)
         self.assertIn('destination', question)
-        self.assertIn('hint', question)
+        self.assertIn('hints', question)
+        self.assertIsInstance(question['hints'], list)
+        self.assertEqual(len(question['hints']), 5)
         self.assertIn('images', question)
         self.assertNotIn('correct_answers', question)
 
@@ -74,6 +76,9 @@ class MainAppTestCase(unittest.TestCase):
         self.assertGreaterEqual(len(quiz_data), 5)
         self.assertEqual(quiz_data[0]['destination'], 'tokyo')
         self.assertIn('correct_answers', quiz_data[0])
+        self.assertIn('hints', quiz_data[0])
+        self.assertIsInstance(quiz_data[0]['hints'], list)
+        self.assertEqual(len(quiz_data[0]['hints']), 5)
 
 
 if __name__ == '__main__':

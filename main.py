@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-QUIZ_DATA_PATH = os.path.join(BASE_DIR, 'quiz_data.json')
+QUIZ_DATA_PATH = os.path.join(BASE_DIR, 'data/quiz_data.json')
 
 with open(QUIZ_DATA_PATH, 'r', encoding='utf-8') as f:
     quiz_data = json.load(f)
@@ -21,7 +21,7 @@ def get_quiz():
         sanitized_quiz.append({
             "id": question["id"],
             "destination": question["destination"],
-            "hint": question["hint"],
+            "hints": question["hints"],
             "images": question["images"]
         })
     return jsonify(sanitized_quiz)
@@ -32,6 +32,7 @@ def check_answer():
     data = request.json
     question_id = data.get('questionId')
     user_answer = data.get('answer', '').lower().strip()
+    hint_index = data.get('hintIndex', 0)
     
     # Find the question
     question = next((q for q in quiz_data if q['id'] == question_id), None)
@@ -42,8 +43,11 @@ def check_answer():
     # Check if answer is correct
     is_correct = user_answer in question['correct_answers']
     
+    points_by_hint = [100, 80, 60, 40, 20]
+    index = min(max(int(hint_index), 0), len(points_by_hint) - 1)
+    
     if is_correct:
-        points = 100  # Full points for correct answers
+        points = points_by_hint[index]
     else:
         points = 0
     
