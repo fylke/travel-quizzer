@@ -32,7 +32,6 @@ def check_answer():
     data = request.json
     question_id = data.get('questionId')
     user_answer = data.get('answer', '').lower().strip()
-    time_remaining = data.get('timeRemaining', 0)  # in seconds
     
     # Find the question
     question = next((q for q in quiz_data if q['id'] == question_id), None)
@@ -51,8 +50,7 @@ def check_answer():
     return jsonify({
         "correct": is_correct,
         "answer": question['destination'],
-        "points": points,
-        "timeRemaining": time_remaining
+        "points": points
     })
 
 @app.route('/api/leaderboard', methods=['POST'])

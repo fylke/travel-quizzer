@@ -10,7 +10,6 @@ let quizState = {
 
 const API_BASE = window.location.origin;
 
-// Initialize quiz
 async function loadQuiz() {
     const loadingMessage = document.getElementById('loadingMessage');
     const startButton = document.getElementById('startButton');
@@ -75,7 +74,6 @@ function loadQuestion() {
     const progressPercent = ((quizState.currentQuestion) / quizState.questions.length) * 100;
     document.getElementById('progressFill').style.width = progressPercent + '%';
     
-    // Load question content
     console.log('Loading question:', question);
     document.getElementById('hint').textContent = question.hint;
     document.getElementById('image1').src = question.images[0];
@@ -83,7 +81,6 @@ function loadQuestion() {
     document.getElementById('answerInput').value = '';
     document.getElementById('answerInput').focus();
     
-    // Reset answered state
     quizState.answered = false;
 }
 
@@ -109,8 +106,7 @@ async function submitAnswer() {
             },
             body: JSON.stringify({
                 questionId: quizState.questions[quizState.currentQuestion].id,
-                answer: userAnswer,
-                timeRemaining: 30  // Always give maximum time for scoring
+                answer: userAnswer
             })
         });
         

@@ -1,5 +1,5 @@
 import unittest
-from flask import Flask, jsonify, request
+
 from main import app, quiz_data
 
 
