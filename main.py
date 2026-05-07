@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import json
 import os
@@ -71,13 +71,11 @@ def save_score():
 @app.route('/')
 def index():
     """Serve the main page"""
-    from flask import send_from_directory
     return send_from_directory('static', 'index.html')
 
 @app.route('/static/<path:filename>')
 def static_files(filename):
     """Serve static files"""
-    from flask import send_from_directory
     return send_from_directory('static', filename)
 
 if __name__ == '__main__':

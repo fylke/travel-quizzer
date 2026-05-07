@@ -1,6 +1,5 @@
 // Quiz State
 let quizState = {
-    currentQuestion: 0,
     hintDifficulty: 5,
     remainingGuesses: 3,
     totalScore: 0,
@@ -90,7 +89,7 @@ function loadQuestion() {
 
 function updateHintDisplay(question) {
     const hintDifficulty = quizState.hintDifficulty;
-    const hintText = question.hints?.[hintDifficulty - 1] || question.hint || '';
+    const hintText = question.hints?.[hintDifficulty] || '';
     const potentialPoints = hintDifficulty * quizState.remainingGuesses;
 
     document.getElementById('hint').textContent = hintText;

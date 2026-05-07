@@ -20,7 +20,7 @@ class MainAppTestCase(unittest.TestCase):
         self.assertIn('id', question)
         self.assertIn('destination', question)
         self.assertIn('hints', question)
-        self.assertIsInstance(question['hints'], list)
+        self.assertIsInstance(question['hints'], dict)
         self.assertEqual(len(question['hints']), 5)
         self.assertIn('images', question)
         self.assertNotIn('correct_answers', question)
@@ -30,8 +30,8 @@ class MainAppTestCase(unittest.TestCase):
         response = self.client.post('/api/check-answer', json={
             'questionId': question['id'],
             'answer': question['correct_answers'][0],
-            'hintIndex': 5,
-            'guessIndex': 3
+            'hintDifficulty': 5,
+            'remainingGuesses': 3
         })
         self.assertEqual(response.status_code, 200)
 
@@ -45,8 +45,8 @@ class MainAppTestCase(unittest.TestCase):
         response = self.client.post('/api/check-answer', json={
             'questionId': question['id'],
             'answer': 'not a valid place',
-            'hintIndex': 0,
-            'guessIndex': 1
+            'hintDifficulty': 0,
+            'remainingGuesses': 1
         })
         self.assertEqual(response.status_code, 200)
 
@@ -81,7 +81,7 @@ class MainAppTestCase(unittest.TestCase):
         self.assertEqual(quiz_data[0]['destination'], 'tokyo')
         self.assertIn('correct_answers', quiz_data[0])
         self.assertIn('hints', quiz_data[0])
-        self.assertIsInstance(quiz_data[0]['hints'], list)
+        self.assertIsInstance(quiz_data[0]['hints'], dict)
         self.assertEqual(len(quiz_data[0]['hints']), 5)
 
 
