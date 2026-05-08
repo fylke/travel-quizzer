@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import json
 import os
+import random
 from datetime import datetime
 
 app = Flask(__name__)
@@ -15,16 +16,43 @@ with open(QUIZ_DATA_PATH, 'r', encoding='utf-8') as f:
 
 @app.route('/api/quiz', methods=['GET'])
 def get_quiz():
-    """Get all quiz questions (without answers for frontend)"""
-    sanitized_quiz = []
-    for question in quiz_data:
-        sanitized_quiz.append({
-            "id": question["id"],
-            "destination": question["destination"],
-            "hints": question["hints"],
-            "images": question["images"]
-        })
-    return jsonify(sanitized_quiz)
+    """Return a random destination along with its first hint and pictures"""
+    random_quiz_index = random.choice(range(len(quiz_data)))
+    random_question = quiz_data[random_quiz_index]
+    hint_difficulty = 5 # Start with the hardest hint
+    return jsonify({
+            "id": random_question["id"],
+            "hint": random_question["hints"].get(str(hint_difficulty)),
+            "images": random_question["images"]
+    })
+
+@app.route('/api/hint', methods=['GET'])
+def get_hint():
+    """Get a specific hint for a question by difficulty level"""
+    question_id = request.args.get('questionId', type=int)
+    difficulty = request.args.get('difficulty', type=int)
+    
+    # Validate parameters
+    if question_id is None or difficulty is None:
+        return jsonify({"error": "Missing questionId or difficulty parameter"}), 400
+    
+    if not (1 <= difficulty <= 5):
+        return jsonify({"error": "Difficulty must be between 1 and 5"}), 400
+    
+    # Find the question
+    question = next((q for q in quiz_data if q['id'] == question_id), None)
+    
+    if not question:
+        return jsonify({"error": "Question not found"}), 404
+    
+    # Get the hint for the specified difficulty
+    hint_text = question['hints'].get(str(difficulty), '')
+    
+    return jsonify({
+        "hint": hint_text,
+        "questionId": question_id,
+        "difficulty": difficulty
+    })
 
 @app.route('/api/check-answer', methods=['POST'])
 def check_answer():
@@ -54,29 +82,10 @@ def check_answer():
         "points": points
     })
 
-@app.route('/api/leaderboard', methods=['POST'])
-def save_score():
-    """Save a quiz completion score"""
-    data = request.json
-    player_name = data.get('name', 'Anonymous')
-    total_score = data.get('score', 0)
-    
-    # In a real app, this would save to a database
-    return jsonify({
-        "message": "Score saved",
-        "name": player_name,
-        "score": total_score
-    })
-
 @app.route('/')
 def index():
     """Serve the main page"""
     return send_from_directory('static', 'index.html')
-
-@app.route('/static/<path:filename>')
-def static_files(filename):
-    """Serve static files"""
-    return send_from_directory('static', filename)
 
 if __name__ == '__main__':
     app.run(debug=False, port=5000, host='0.0.0.0')

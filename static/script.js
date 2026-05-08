@@ -4,33 +4,11 @@ let quizState = {
     remainingGuesses: 3,
     totalScore: 0,
     playerName: '',
-    questions: [],
-    answered: false,
-    quizLoaded: false
+    destination: [],
+    answered: false
 };
 
 const API_BASE = window.location.origin;
-
-async function loadQuiz() {
-    const loadingMessage = document.getElementById('loadingMessage');
-    const startButton = document.getElementById('startButton');
-    
-    loadingMessage.style.display = 'block';
-    startButton.disabled = true;
-    
-    try {
-        const response = await fetch(`${API_BASE}/api/quiz`);
-        quizState.questions = await response.json();
-        quizState.quizLoaded = true;
-        
-        loadingMessage.style.display = 'none';
-        startButton.disabled = false;
-    } catch (error) {
-        console.error('Error loading quiz:', error);
-        loadingMessage.textContent = 'Failed to load quiz. Please refresh the page.';
-        loadingMessage.style.color = 'red';
-    }
-}
 
 function startQuiz() {
     const playerName = document.getElementById('playerName').value.trim();
@@ -40,16 +18,12 @@ function startQuiz() {
         return;
     }
     
-    if (!quizState.quizLoaded) {
-        alert('Quiz is still loading. Please wait a moment and try again.');
-        return;
-    }
-    
     quizState.playerName = playerName;
     quizState.currentQuestion = 0;
     quizState.totalScore = 0;
     
     showScreen('quizScreen');
+    console.log('Loading quiz for player: ', playerName);
     loadQuestion();
 }
 
@@ -60,36 +34,46 @@ function showScreen(screenId) {
     document.getElementById(screenId).classList.remove('hidden');
 }
 
-function loadQuestion() {
-    if (quizState.currentQuestion >= quizState.questions.length) {
-        endQuiz();
-        return;
-    }
+async function loadQuestion() {
+    console.log('Quiz state: ', quizState);
     
-    const question = quizState.questions[quizState.currentQuestion];
+    try {
+        const response = await fetch(`${API_BASE}/api/quiz`);
+        quizState.destination = await response.json();
+        
+        loadingMessage.style.display = 'none';
+        startButton.disabled = false;
+    } catch (error) {
+        console.error('Error loading quiz:', error);
+        loadingMessage.textContent = 'Failed to load quiz. Please refresh the page.';
+        loadingMessage.style.color = 'red';
+    }
+
+    const destination = quizState.destination;
     
     // Update progress
     document.getElementById('currentQuestion').textContent = quizState.currentQuestion + 1;
     document.getElementById('scoreDisplay').textContent = `Score: ${quizState.totalScore}`;
     
-    const progressPercent = ((quizState.currentQuestion) / quizState.questions.length) * 100;
+    const progressPercent = ((quizState.currentQuestion) / quizState.destination.length) * 100;
     document.getElementById('progressFill').style.width = progressPercent + '%';
     
-    console.log('Loading question:', question);
+    console.log('Loading question:', destination);
     quizState.hintDifficulty = 5;
     quizState.remainingGuesses = 3;
-    updateHintDisplay(question);
-    document.getElementById('image1').src = question.images[0];
-    document.getElementById('image2').src = question.images[1];
+    document.getElementById('hint').textContent = destination.hint;
+    document.getElementById('hintProgress').textContent = `Hint difficulty is ${quizState.hintDifficulty}, and you have ${quizState.remainingGuesses} remaining guesses.`;
+    document.getElementById('hintPoints').textContent = `If you guess correctly, you will get ${quizState.hintDifficulty * quizState.remainingGuesses} points.`;
+    document.getElementById('image1').src = destination.images[0];
+    document.getElementById('image2').src = destination.images[1];
     document.getElementById('answerInput').value = '';
     document.getElementById('answerInput').focus();
     
     quizState.answered = false;
 }
 
-function updateHintDisplay(question) {
+function updateHintDisplay(question, hintText) {
     const hintDifficulty = quizState.hintDifficulty;
-    const hintText = question.hints?.[hintDifficulty] || '';
     const potentialPoints = hintDifficulty * quizState.remainingGuesses;
 
     document.getElementById('hint').textContent = hintText;
@@ -118,7 +102,7 @@ async function submitAnswer() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                questionId: quizState.questions[quizState.currentQuestion].id,
+                questionId: quizState.destination[quizState.currentQuestion].id,
                 answer: userAnswer,
                 hintDifficulty: quizState.hintDifficulty,
                 remainingGuesses: quizState.remainingGuesses
@@ -126,7 +110,7 @@ async function submitAnswer() {
         });
         
         const result = await response.json();
-        const question = quizState.questions[quizState.currentQuestion];
+        const question = quizState.destination[quizState.currentQuestion];
         
         if (result.correct) {
             quizState.totalScore += result.points;
@@ -149,14 +133,29 @@ async function submitAnswer() {
     }
 }
 
-function skipHint() {
-    const question = quizState.questions[quizState.currentQuestion];
+async function fetchHint(wantedHintDifficulty) {
+    const question = quizState.destination[quizState.currentQuestion];
+    nextHintDifficulty = quizState.hintDifficulty - 1;
     
-    if (quizState.hintDifficulty > 1) {
-        quizState.hintDifficulty--;
-        updateHintDisplay(question);
-        document.getElementById('answerInput').value = '';
-        document.getElementById('answerInput').focus();
+    if (wantedHintDifficulty > 0) {
+        document.getElementById('hint').textContent = 'Loading hint...';
+        
+        try {
+            const response = await fetch(`${API_BASE}/api/hint?questionId=${question.id}&difficulty=${wantedHintDifficulty}`);
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch hint');
+            }
+            
+            const data = await response.json();
+            quizState.hintDifficulty--;
+            updateHintDisplay(question, data.hint);
+            document.getElementById('answerInput').value = '';
+            document.getElementById('answerInput').focus();
+        } catch (error) {
+            console.error('Error fetching hint:', error);
+            document.getElementById('hint').textContent = 'Error loading hint. Please try again.';
+        }
     } else {
         // If no more hints, show feedback as incorrect
         showFeedback(false, 0, question.destination);
@@ -189,7 +188,7 @@ function showFeedback(isCorrect, points, correctAnswer) {
 function nextQuestion() {
     quizState.currentQuestion++;
     
-    if (quizState.currentQuestion >= quizState.questions.length) {
+    if (quizState.currentQuestion >= quizState.destination.length) {
         endQuiz();
     } else {
         showScreen('quizScreen');
@@ -236,8 +235,6 @@ function resetQuiz() {
 
 // Allow Enter key to submit answer
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadQuiz();
-    
     document.getElementById('answerInput')?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !quizState.answered) {
             submitAnswer();

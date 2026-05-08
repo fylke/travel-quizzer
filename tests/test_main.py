@@ -19,9 +19,6 @@ class MainAppTestCase(unittest.TestCase):
         question = data[0]
         self.assertIn('id', question)
         self.assertIn('destination', question)
-        self.assertIn('hints', question)
-        self.assertIsInstance(question['hints'], dict)
-        self.assertEqual(len(question['hints']), 5)
         self.assertIn('images', question)
         self.assertNotIn('correct_answers', question)
 
