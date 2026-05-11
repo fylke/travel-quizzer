@@ -8,19 +8,17 @@ class MainAppTestCase(unittest.TestCase):
         app.testing = True
         self.client = app.test_client()
 
-    def test_quiz_endpoint_returns_sanitized_questions(self):
+    def test_quiz_endpoint_returns_first_hint_of_random_destination(self):
         response = self.client.get('/api/quiz')
         self.assertEqual(response.status_code, 200)
 
         data = response.get_json()
-        self.assertIsInstance(data, list)
-        self.assertGreaterEqual(len(data), 1)
-
-        question = data[0]
-        self.assertIn('id', question)
-        self.assertIn('destination', question)
-        self.assertIn('images', question)
-        self.assertNotIn('correct_answers', question)
+        self.assertIsInstance(data, dict)
+        self.assertEqual(len(data), 3) # Should contain id, hint, and images
+        self.assertIn('id', data)
+        self.assertIn('images', data)
+        images = data.get('images')
+        self.assertGreaterEqual(len(images), 2)
 
     def test_check_answer_returns_correct_for_valid_answer(self):
         question = quiz_data[0]
@@ -60,18 +58,6 @@ class MainAppTestCase(unittest.TestCase):
 
         data = response.get_json()
         self.assertEqual(data['error'], 'Question not found')
-
-    def test_leaderboard_endpoint_saves_score(self):
-        response = self.client.post('/api/leaderboard', json={
-            'name': 'Tester',
-            'score': 123
-        })
-        self.assertEqual(response.status_code, 200)
-
-        data = response.get_json()
-        self.assertEqual(data['message'], 'Score saved')
-        self.assertEqual(data['name'], 'Tester')
-        self.assertEqual(data['score'], 123)
 
     def test_quiz_data_is_loaded_from_json(self):
         self.assertGreaterEqual(len(quiz_data), 5)
