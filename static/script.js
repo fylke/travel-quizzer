@@ -1,8 +1,8 @@
 // Quiz State
 let quizState = {
+    id: 0,
     hintDifficulty: 5,
     remainingGuesses: 3,
-    totalScore: 0,
     playerName: '',
     destination: [],
     answered: false
@@ -19,8 +19,6 @@ function startQuiz() {
     }
     
     quizState.playerName = playerName;
-    quizState.currentQuestion = 0;
-    quizState.totalScore = 0;
     
     showScreen('quizScreen');
     console.log('Loading quiz for player: ', playerName);
@@ -50,12 +48,9 @@ async function loadQuestion() {
     }
 
     const destination = quizState.destination;
+    quizState.id = destination.id;
     
-    // Update progress
-    document.getElementById('currentQuestion').textContent = quizState.currentQuestion + 1;
-    document.getElementById('scoreDisplay').textContent = `Score: ${quizState.totalScore}`;
-    
-    const progressPercent = ((quizState.currentQuestion) / quizState.destination.length) * 100;
+    const progressPercent = ((quizState.hintDifficulty) / 5) * 100;
     document.getElementById('progressFill').style.width = progressPercent + '%';
     
     console.log('Loading question:', destination);
@@ -72,7 +67,7 @@ async function loadQuestion() {
     quizState.answered = false;
 }
 
-function updateHintDisplay(question, hintText) {
+function updateHintDisplay(hintText) {
     const hintDifficulty = quizState.hintDifficulty;
     const potentialPoints = hintDifficulty * quizState.remainingGuesses;
 
@@ -102,7 +97,7 @@ async function submitAnswer() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                questionId: quizState.destination[quizState.currentQuestion].id,
+                questionId: quizState.destination.id,
                 answer: userAnswer,
                 hintDifficulty: quizState.hintDifficulty,
                 remainingGuesses: quizState.remainingGuesses
@@ -110,15 +105,15 @@ async function submitAnswer() {
         });
         
         const result = await response.json();
-        const question = quizState.destination[quizState.currentQuestion];
         
         if (result.correct) {
-            quizState.totalScore += result.points;
             showFeedback(true, result.points, result.answer);
         } else {
             if (quizState.remainingGuesses > 0) {
+                quizState.hintDifficulty--;
+                fetchHint(quizState.hintDifficulty);
                 quizState.remainingGuesses--;
-                updateHintDisplay(question);
+                updateHintDisplay(hint);
                 answerInput.value = '';
                 answerInput.focus();
                 quizState.answered = false;
@@ -133,23 +128,19 @@ async function submitAnswer() {
     }
 }
 
-async function fetchHint(wantedHintDifficulty) {
-    const question = quizState.destination[quizState.currentQuestion];
-    nextHintDifficulty = quizState.hintDifficulty - 1;
-    
+async function fetchHint(wantedHintDifficulty) { 
     if (wantedHintDifficulty > 0) {
         document.getElementById('hint').textContent = 'Loading hint...';
         
         try {
-            const response = await fetch(`${API_BASE}/api/hint?questionId=${question.id}&difficulty=${wantedHintDifficulty}`);
+            const response = await fetch(`${API_BASE}/api/hint?questionId=${quizState.id}&difficulty=${wantedHintDifficulty}`);
             
             if (!response.ok) {
                 throw new Error('Failed to fetch hint');
             }
             
-            const data = await response.json();
-            quizState.hintDifficulty--;
-            updateHintDisplay(question, data.hint);
+            const hint = await response.json();
+            updateHintDisplay(hint.hint);
             document.getElementById('answerInput').value = '';
             document.getElementById('answerInput').focus();
         } catch (error) {
@@ -185,31 +176,20 @@ function showFeedback(isCorrect, points, correctAnswer) {
     }
 }
 
-function nextQuestion() {
-    quizState.currentQuestion++;
-    
-    if (quizState.currentQuestion >= quizState.destination.length) {
-        endQuiz();
-    } else {
-        showScreen('quizScreen');
-        loadQuestion();
-    }
-}
-
-function endQuiz() {
+function endQuiz(score) {
     showScreen('resultsScreen');
     
-    document.getElementById('finalScore').textContent = quizState.totalScore;
+    document.getElementById('finalScore').textContent = score;
     
     // Generate message based on score
     let message = '';
-    if (quizState.totalScore >= 400) {
+    if (score >= 15) {
         message = '🌟 Outstanding! You are a true travel expert!';
-    } else if (quizState.totalScore >= 300) {
+    } else if (score >= 12) {
         message = '🎉 Excellent! You know your destinations well!';
-    } else if (quizState.totalScore >= 200) {
+    } else if (score >= 9) {
         message = '👏 Good job! Keep exploring the world!';
-    } else if (quizState.totalScore >= 100) {
+    } else if (score >= 6) {
         message = '📚 Not bad! Time to travel more!';
     } else {
         message = '🗺️ Keep learning about travel destinations!';
@@ -219,15 +199,11 @@ function endQuiz() {
 }
 
 function retakeQuiz() {
-    quizState.currentQuestion = 0;
-    quizState.totalScore = 0;
     showScreen('quizScreen');
     loadQuestion();
 }
 
 function resetQuiz() {
-    quizState.currentQuestion = 0;
-    quizState.totalScore = 0;
     quizState.playerName = '';
     document.getElementById('playerName').value = '';
     showScreen('welcomeScreen');
