@@ -1,4 +1,4 @@
-@startuml
+@startuml CheckAnswer
 actor       User
 participant Frontend
 participant Backend

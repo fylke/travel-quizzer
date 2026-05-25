@@ -1,4 +1,4 @@
-@startuml
+@startuml FetchNextHint
 actor       User
 participant Frontend
 participant Backend

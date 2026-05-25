@@ -11,8 +11,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code and static files
-COPY main.py .
-COPY static/ ./static/
+COPY src/main.py .
+COPY src/static/ ./static/
 COPY data/ ./data/
 
 # Expose port 5000

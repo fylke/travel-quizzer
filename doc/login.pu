@@ -1,4 +1,4 @@
-@startuml
+@startuml Login
 actor       User
 participant Frontend
 participant Backend
