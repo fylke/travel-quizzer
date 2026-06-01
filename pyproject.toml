@@ -1,0 +1,29 @@
+[project]
+name = "travel-quizzer"
+version = "0.1.0"
+description = "Webapp for running travel-related quizzes"
+authors = [
+    {name = "Magnus Leone",email = "magnus.falk@gmail.com"}
+]
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.10,<4.0"
+dependencies = [
+    "flask (>=3.1.3,<4.0.0)",
+    "flask-cors (>=6.0.2,<7.0.0)",
+    "uvicorn (>=0.48.0,<0.49.0)",
+    "docker (>=7.1.0,<8.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [
+    { include = "main", from = "src" }
+]
+
+[tool.isort]
+profile = "black"

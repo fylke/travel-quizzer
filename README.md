@@ -7,77 +7,88 @@ A fun interactive quiz game where you guess travel destinations based on hints a
 - **5 Travel Destinations** to guess: Tokyo, Paris, New York, Sydney, and Rome
 - **2 Images per Question** to help with identification
 - **Hint System** with descriptive clues about each destination
-- **Simple Scoring** - 100 points for correct answers, 0 for incorrect
+- **Multi-level Hint System** - 5 difficulty levels of hints (hardest to easiest)
+- **Dynamic Scoring** - points based on hint difficulty and remaining guesses
 - **Responsive Design** - works on desktop and mobile devices
 - **Real-time Feedback** - instant answer validation with points calculation
 
 ## Scoring System
 
-- **Correct Answer**: 100 points per question (500 total)
+- **Correct Answer**: `hint_difficulty × remaining_guesses` points
 - **Wrong Answer**: 0 points
-- **Simple and Fair**: No time pressure, focus on knowledge
+- **Hint Difficulty Levels**: 1-5 (5 is hardest hint, 1 is easiest)
+- **Remaining Guesses**: Number of attempts left for the question
+- **Example**: Correct answer with difficulty 5 and 3 remaining guesses = 15 points
 
 ## Project Structure
 
 ```
 travel-quizzer/
-├── main.py                 # Flask backend server
-├── requirements.txt        # Python dependencies
-├── Dockerfile              # Container build configuration
-├── docker-compose.yml      # Docker Compose orchestration
-├── .dockerignore           # Files excluded from Docker build
+├── src/
+│   └── main/
+│       ├── __init__.py        # Flask app initialization
+│       └── __main__.py        # Entry point
 ├── static/
-│   ├── index.html         # Main HTML page
-│   ├── style.css          # Styling
-│   └── script.js          # Frontend logic
-└── README.md              # This file
+│   ├── index.html            # Main HTML page
+│   ├── style.css             # Styling
+│   └── script.js             # Frontend logic
+├── data/
+│   └── quiz_data.json        # Quiz questions and data
+├── test/
+│   └── test_main.py          # Test suite
+├── pyproject.toml            # Poetry configuration
+├── requirements.txt          # Python dependencies
+├── Dockerfile                # Container build configuration
+├── docker-compose.yml        # Docker Compose orchestration
+├── .dockerignore             # Files excluded from Docker build
+└── README.md                 # This file
 ```
 
 ## Setup Instructions
 
 ### Prerequisites
-- Python 3.7+
-- pip or pipenv
+- Python 3.10 or higher
+- Poetry (recommended) or pip
 
 ### Installation
 
 1. **Navigate to the project directory:**
    ```bash
-   cd c:\Users\Magnusle\code\travel-quizzer
+   cd travel-quizzer
    ```
 
-2. **Create a virtual environment (recommended):**
+2. **Install dependencies with Poetry:**
    ```bash
-   python -m venv venv
+   poetry install
    ```
-
-3. **Activate the virtual environment:**
-   - On Windows:
-     ```bash
-     venv\Scripts\activate
-     ```
-   - On macOS/Linux:
-     ```bash
-     source venv/bin/activate
-     ```
-
-4. **Install dependencies:**
+   
+   Or if using pip directly:
    ```bash
    pip install -r requirements.txt
+   ```
+
+3. **(Optional) Activate Poetry virtual environment:**
+   ```bash
+   poetry shell
    ```
 
 ## Running the Application
 
 ### Local Development
 
-1. **Start the Flask server:**
+1. **Start the Flask server with Poetry:**
    ```bash
-   python main.py
+   poetry run python -m src.main
+   ```
+   
+   Or if using pip:
+   ```bash
+   python -m src.main
    ```
 
    You should see output like:
    ```
-   * Running on http://127.0.0.1:5000
+   * Running on http://0.0.0.0:5000
    ```
 
 2. **Open your browser and go to:**
@@ -157,21 +168,7 @@ For CI/CD or sharing with others:
    docker run -p 9696:5000 <your_registry>/<your_username>/travel-quizzer:latest
    ```
 
-#### Docker File Structure
 
-```
-travel-quizzer/
-├── Dockerfile              # Container build configuration
-├── docker-compose.yml      # Docker Compose orchestration
-├── .dockerignore          # Files excluded from Docker build
-├── main.py                # Flask backend server
-├── requirements.txt       # Python dependencies
-├── static/
-│   ├── index.html        # Main HTML page
-│   ├── style.css         # Styling
-│   └── script.js         # Frontend logic
-└── README.md             # This file
-```
 
 ## How to Play
 
@@ -186,16 +183,28 @@ travel-quizzer/
 ## API Endpoints
 
 ### GET `/api/quiz`
-Returns all quiz questions without answers:
+Returns a random quiz question with initial hint (difficulty 5) and images:
 ```json
-[
-    {
-        "id": 1,
-        "destination": "tokyo",
-        "hint": "This bustling metropolis...",
-        "images": ["url1", "url2"]
-    }
-]
+{
+    "id": 1,
+    "hint": "This bustling metropolis is known for...",
+    "images": ["https://picsum.photos/400/300?random=1", "https://picsum.photos/400/300?random=2"]
+}
+```
+
+### GET `/api/hint`
+Get a specific hint for a question by difficulty level (1-5):
+```
+GET /api/hint?questionId=1&difficulty=3
+```
+
+Response:
+```json
+{
+    "hint": "This city is the capital of a country...",
+    "questionId": 1,
+    "difficulty": 3
+}
 ```
 
 ### POST `/api/check-answer`
@@ -204,7 +213,8 @@ Submit an answer and get validation:
 {
     "questionId": 1,
     "answer": "tokyo",
-    "timeRemaining": 25
+    "hintDifficulty": 5,
+    "remainingGuesses": 3
 }
 ```
 
@@ -213,34 +223,36 @@ Response:
 {
     "correct": true,
     "answer": "tokyo",
-    "points": 85,
-    "timeRemaining": 25
+    "points": 15
 }
 ```
 
 ## Customization
 
 ### Add More Destinations
-Edit the `quiz_data` list in `main.py` to add more travel destinations:
+Edit `data/quiz_data.json` to add more travel destinations:
 
-```python
+```json
 {
     "id": 6,
     "destination": "barcelona",
-    "hint": "Your custom hint here...",
-    "images": ["image_url_1", "image_url_2"],
-    "correct_answers": ["barcelona", "spain"]
+    "hints": {
+        "5": "Hardest hint about Barcelona...",
+        "4": "Medium-hard hint...",
+        "3": "Medium hint...",
+        "2": "Easier hint...",
+        "1": "Easiest hint..."
+    },
+    "images": ["https://picsum.photos/400/300?random=11", "https://picsum.photos/400/300?random=12"],
+    "correct_answers": ["barcelona, spain"]
 }
 ```
 
-### Change Timer Duration
-The timer has been removed for a simpler experience. All correct answers receive 100 points.
-
 ### Adjust Scoring Formula
-Currently set to 100 points for correct answers, 0 for incorrect. Modify in `main.py`:
+Modify the scoring calculation in `src/main/__init__.py`:
 ```python
 if is_correct:
-    points = 100  # Change this value for different scoring
+    points = hint_difficulty * remaining_guesses  # Customize this formula
 else:
     points = 0
 ```
@@ -266,10 +278,11 @@ else:
 - [ ] User authentication
 - [ ] Multiplayer mode
 - [ ] More destinations and categories
-- [ ] Difficulty levels
+- [ ] Configurable categories/difficulty levels
 - [ ] Achievement badges
 - [ ] Sound effects
 - [ ] Mobile app version
+- [ ] Timed rounds option
 
 ## License
 
