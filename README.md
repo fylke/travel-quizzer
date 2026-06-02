@@ -37,7 +37,6 @@ travel-quizzer/
 ├── test/
 │   └── test_main.py          # Test suite
 ├── pyproject.toml            # Poetry configuration
-├── requirements.txt          # Python dependencies
 ├── Dockerfile                # Container build configuration
 ├── docker-compose.yml        # Docker Compose orchestration
 ├── .dockerignore             # Files excluded from Docker build
