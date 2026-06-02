@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code and static files
 COPY src/ ./src/
+COPY src/static/ ./static/
 COPY data/ ./data/
 
 # Set Python path so the package can be imported from src
