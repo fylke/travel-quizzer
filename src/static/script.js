@@ -128,6 +128,20 @@ async function submitAnswer() {
     }
 }
 
+async function skipHint() {
+    if (quizState.remainingGuesses > 0) {
+        quizState.hintDifficulty--;
+        quizState.remainingGuesses--;
+        
+        if (quizState.hintDifficulty > 0) {
+            await fetchHint(quizState.hintDifficulty);
+        } else {
+            // No more hints available
+            showFeedback(false, 0, quizState.destination.destination);
+        }
+    }
+}
+
 async function fetchHint(wantedHintDifficulty) { 
     if (wantedHintDifficulty > 0) {
         document.getElementById('hint').textContent = 'Loading hint...';
@@ -149,7 +163,7 @@ async function fetchHint(wantedHintDifficulty) {
         }
     } else {
         // If no more hints, show feedback as incorrect
-        showFeedback(false, 0, question.destination);
+        showFeedback(false, 0, quizState.destination.destination);
     }
 }
 
