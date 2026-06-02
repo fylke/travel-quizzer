@@ -71,6 +71,18 @@ travel-quizzer/
    poetry shell
    ```
 
+## Running Unit Tests
+
+From the project root, run:
+```bash
+poetry run python -m unittest discover -s test
+```
+
+Or with the explicit module path:
+```bash
+poetry run python -m unittest test.test_main
+```
+
 ## Running the Application
 
 ### Local Development
