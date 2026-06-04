@@ -13,8 +13,10 @@ STATIC_DIR = os.path.join(SRC_ROOT, 'static')
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='/static')
 CORS(app)
 
-# Configure database
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(PROJECT_ROOT, "data", "quiz_data.db")}'
+# Configure database (allow override via env var)
+default_db_path = os.path.join(PROJECT_ROOT, "data", "quiz_data.db")
+db_url = os.environ.get('QUIZ_DATABASE_URL') or os.environ.get('DATABASE_URL') or f"sqlite:///{default_db_path}"
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
