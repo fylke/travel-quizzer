@@ -1,0 +1,43 @@
+from flask_sqlalchemy import SQLAlchemy
+
+# Shared SQLAlchemy instance used by the app and tests
+# Flask-SQLAlchemy will bind this to the Flask app in src/main/__init__.py
+
+db = SQLAlchemy()
+
+class Destination(db.Model):
+    __tablename__ = 'destination'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    hint1 = db.Column(db.String(256), nullable=False)
+    hint2 = db.Column(db.String(256), nullable=False)
+    hint3 = db.Column(db.String(256), nullable=False)
+    hint4 = db.Column(db.String(256), nullable=False)
+    hint5 = db.Column(db.String(256), nullable=False)
+    images = db.Column(db.JSON, nullable=False)
+    correct_answers = db.Column(db.JSON, nullable=False)
+
+    results = db.relationship('QuizResult', back_populates='destination', cascade='all, delete-orphan')
+
+class User(db.Model):
+    __tablename__ = 'user'
+
+    id = db.Column(db.Integer, primary_key=True)
+    password_hash = db.Column(db.String(256), nullable=False)
+    name = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(128), nullable=False, unique=True)
+
+    results = db.relationship('QuizResult', back_populates='user', cascade='all, delete-orphan')
+
+class QuizResult(db.Model):
+    __tablename__ = 'quiz_result'
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    destination_id = db.Column(db.Integer, db.ForeignKey('destination.id'), primary_key=True)
+    hint_difficulty = db.Column(db.Integer, nullable=False, default=5)
+    remaining_guesses = db.Column(db.Integer, nullable=False, default=3)
+    ongoing = db.Column(db.Boolean, nullable=False, default=True)
+
+    user = db.relationship('User', back_populates='results')
+    destination = db.relationship('Destination', back_populates='results')

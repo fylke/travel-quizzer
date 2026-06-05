@@ -8,7 +8,7 @@ if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
 from main import app
-from main.models import db, Quiz
+from main.models import db, Destination
 
 # Small fixture used by tests so they don't rely on the removed JSON file
 SAMPLE_DATA = [
@@ -101,10 +101,14 @@ class MainAppTestCase(unittest.TestCase):
             db.drop_all()
             db.create_all()
             for item in SAMPLE_DATA:
-                q = Quiz(
+                q = Destination(
                     id=item['id'],
-                    destination=item['destination'],
-                    hints=item['hints'],
+                    name=item['destination'],
+                    hint1=item['hints']['1'],
+                    hint2=item['hints']['2'],
+                    hint3=item['hints']['3'],
+                    hint4=item['hints']['4'],
+                    hint5=item['hints']['5'],
                     images=item['images'],
                     correct_answers=item['correct_answers']
                 )

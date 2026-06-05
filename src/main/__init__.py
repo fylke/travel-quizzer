@@ -3,7 +3,7 @@ from flask_cors import CORS
 import os
 import random
 from datetime import datetime
-from .models import db, Quiz
+from .models import db, Destination
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SRC_ROOT = os.path.dirname(BASE_DIR)
@@ -23,43 +23,43 @@ db.init_app(app)
 @app.route('/api/quiz', methods=['GET'])
 def get_quiz():
     """Return a random destination along with its first hint and pictures"""
-    quizzes = Quiz.query.all()
-    if not quizzes:
+    destinations = Destination.query.all()
+    if not destinations:
         return jsonify({"error": "No quiz data available"}), 404
     
-    random_question = random.choice(quizzes)
+    random_destination = random.choice(destinations)
     hint_difficulty = 5  # Start with the hardest hint
+    hint_text = getattr(random_destination, f"hint{hint_difficulty}", '')
+
     return jsonify({
-            "id": random_question.id,
-            "hint": random_question.hints.get(str(hint_difficulty)),
-            "images": random_question.images
+            "id": random_destination.id,
+            "hint": hint_text,
+            "images": random_destination.images
     })
 
 @app.route('/api/hint', methods=['GET'])
 def get_hint():
-    """Get a specific hint for a question by difficulty level"""
-    question_id = request.args.get('questionId', type=int)
+    """Get a specific hint for a destination by difficulty level"""
+    destination_id = request.args.get('questionId', type=int)
     difficulty = request.args.get('difficulty', type=int)
     
     # Validate parameters
-    if question_id is None or difficulty is None:
+    if destination_id is None or difficulty is None:
         return jsonify({"error": "Missing questionId or difficulty parameter"}), 400
     
     if not (1 <= difficulty <= 5):
         return jsonify({"error": "Difficulty must be between 1 and 5"}), 400
     
-    # Find the question in database
-    question = Quiz.query.filter_by(id=question_id).first()
+    question = Destination.query.filter_by(id=destination_id).first()
     
     if not question:
         return jsonify({"error": "Question not found"}), 404
     
-    # Get the hint for the specified difficulty
-    hint_text = question.hints.get(str(difficulty), '')
+    hint_text = getattr(question, f"hint{difficulty}", '')
     
     return jsonify({
         "hint": hint_text,
-        "questionId": question_id,
+        "questionId": destination_id,
         "difficulty": difficulty
     })
 
@@ -67,13 +67,12 @@ def get_hint():
 def check_answer():
     """Check if the answer is correct and return points"""
     data = request.json
-    question_id = data.get('questionId')
+    destination_id = data.get('questionId')
     user_answer = data.get('answer', '').lower().strip()
     hint_difficulty = data.get('hintDifficulty', 0)
     remaining_guesses = data.get('remainingGuesses', 1)
     
-    # Find the question in database
-    question = Quiz.query.filter_by(id=question_id).first()
+    question = Destination.query.filter_by(id=destination_id).first()
     
     if not question:
         return jsonify({"error": "Question not found"}), 404
@@ -87,7 +86,7 @@ def check_answer():
     
     return jsonify({
         "correct": is_correct,
-        "answer": question.destination,
+        "answer": question.name,
         "points": points
     })
 
