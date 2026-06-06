@@ -39,7 +39,6 @@ travel-quizzer/
 ├── pyproject.toml            # Poetry configuration
 ├── Dockerfile                # Container build configuration
 ├── docker-compose.yml        # Docker Compose orchestration
-├── .dockerignore             # Files excluded from Docker build
 └── README.md                 # This file
 ```
 
@@ -192,6 +191,53 @@ For CI/CD or sharing with others:
 7. After all 5 questions, see your final score and ranking
 
 ## API Endpoints
+
+### POST `/api/register`
+Create a new account and start an authenticated session:
+```json
+{
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "password": "s3cur3pass"
+}
+```
+
+Response:
+```json
+{
+    "id": 1,
+    "name": "Jane Doe",
+    "email": "jane@example.com"
+}
+```
+
+### POST `/api/login`
+Log in using email and password:
+```json
+{
+    "email": "jane@example.com",
+    "password": "s3cur3pass"
+}
+```
+
+Response:
+```json
+{
+    "id": 1,
+    "name": "Jane Doe",
+    "email": "jane@example.com"
+}
+```
+
+### GET `/api/me`
+Get the current authenticated user:
+```json
+{
+    "id": 1,
+    "name": "Jane Doe",
+    "email": "jane@example.com"
+}
+```
 
 ### GET `/api/quiz`
 Returns a random quiz question with initial hint (difficulty 5) and images:

@@ -10,19 +10,37 @@
     <div class="container">
         <div id="welcomeScreen" class="screen">
             <div class="welcome-content">
-                <h1>✈️ Travel Quiz</h1>
-                <p>Guess the travel destination based on the hint and images!</p>
-                <p class="subtitle">Test your travel knowledge</p>
+                <h1 id="authHeading">✈️ Travel Quiz</h1>
+                <p id="authSubtext">Log in or create an account to continue.</p>
                 
-                <div class="input-group">
+                <div class="input-group auth-group">
                     <input 
                         type="text" 
-                        id="playerName" 
+                        id="name" 
                         placeholder="Enter your name" 
                         maxlength="20"
+                        class="hidden"
                     >
-                    <button onclick="startQuiz()" class="btn btn-primary" id="startButton">Start Quiz</button>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        placeholder="Enter your email" 
+                        maxlength="100"
+                    >
+                    <input 
+                        type="password" 
+                        id="password" 
+                        placeholder="Enter your password" 
+                        maxlength="50"
+                    >
+                    <button onclick="handleAuth()" class="btn btn-primary" id="authButton">Log In</button>
                 </div>
+
+                <div class="button-group auth-toggle-group">
+                    <button onclick="toggleAuthMode('register')" class="btn btn-secondary" id="switchToRegister">Create an account</button>
+                    <button onclick="toggleAuthMode('login')" class="btn btn-secondary hidden" id="switchToLogin">Already have an account?</button>
+                </div>
+
                 <div id="loadingMessage" class="loading-message" style="display: none;">
                     Loading quiz...
                 </div>

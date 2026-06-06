@@ -8,7 +8,8 @@ if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
 from main import app
-from main.models import db, Destination
+from main.models import db, Destination, User
+from werkzeug.security import generate_password_hash
 
 # Small fixture used by tests so they don't rely on the removed JSON file
 SAMPLE_DATA = [
@@ -113,7 +114,20 @@ class MainAppTestCase(unittest.TestCase):
                     correct_answers=item['correct_answers']
                 )
                 db.session.add(q)
+
+            self.test_user = User(
+                name='Test User',
+                email='test@example.com',
+                password_hash=generate_password_hash('password123')
+            )
+            db.session.add(self.test_user)
             db.session.commit()
+
+        login_response = self.client.post('/api/login', json={
+            'email': 'test@example.com',
+            'password': 'password123'
+        })
+        self.assertEqual(login_response.status_code, 200)
         self.quiz_data = SAMPLE_DATA
 
     def tearDown(self):
@@ -178,6 +192,34 @@ class MainAppTestCase(unittest.TestCase):
 
         data = response.get_json()
         self.assertEqual(data['error'], 'Question not found')
+
+    def test_register_endpoint_creates_user_and_sets_session(self):
+        response = self.client.post('/api/register', json={
+            'name': 'New User',
+            'email': 'newuser@example.com',
+            'password': 'newpassword'
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data['name'], 'New User')
+        self.assertEqual(data['email'], 'newuser@example.com')
+
+    def test_login_endpoint_allows_registered_user(self):
+        response = self.client.post('/api/login', json={
+            'email': 'test@example.com',
+            'password': 'password123'
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data['name'], 'Test User')
+        self.assertEqual(data['email'], 'test@example.com')
+
+    def test_quiz_endpoint_requires_authentication(self):
+        client = app.test_client()
+        response = client.get('/api/quiz')
+        self.assertEqual(response.status_code, 401)
+        data = response.get_json()
+        self.assertEqual(data['error'], 'Authentication required')
 
     def test_quiz_data_is_loaded_from_json(self):
         self.assertGreaterEqual(len(self.quiz_data), 5)
