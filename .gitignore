@@ -17,3 +17,4 @@ dist/
 
 # OS
 .DS_Store
+data/quiz_data.db
