@@ -13,9 +13,8 @@ def tests(session):
 @nox.session
 def e2e(session):
     """Install dependencies and run Playwright end-to-end tests."""
-    session.log("Installing project dependencies with Poetry...")
-    session.run("poetry", "install", external=True)
-    session.install("pytest", "pytest-playwright")
+    session.log("Installing project dependencies with Poetry and test dependencies...")
+    session.run("poetry", "install", "--with", "test", external=True)
     session.log("Patching Playwright platform detection for Ubuntu 26.04...")
     session.run(
         "python",

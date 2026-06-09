@@ -28,5 +28,9 @@ packages = [
     { include = "main", from = "src" }
 ]
 
+[tool.poetry.group.test.dependencies]
+pytest = "^8.0"
+pytest-playwright = "^0.5"
+
 [tool.isort]
 profile = "black"
