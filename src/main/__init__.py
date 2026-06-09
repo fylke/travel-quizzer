@@ -18,6 +18,15 @@ app.secret_key = os.environ.get('SECRET_KEY', 'change-me-in-production')
 # Configure database (allow override via env var)
 default_db_path = os.path.join(PROJECT_ROOT, "data", "quiz_data.db")
 db_url = os.environ.get('QUIZ_DATABASE_URL') or os.environ.get('DATABASE_URL') or f"sqlite:///{default_db_path}"
+
+if db_url.startswith("sqlite:///") and db_url != "sqlite:///:memory:":
+    db_path = db_url.split("sqlite:///")[1]
+    db_path = os.path.abspath(db_path)
+    db_dir = os.path.dirname(db_path)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
+    db_url = f"sqlite:///{db_path}"
+
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)

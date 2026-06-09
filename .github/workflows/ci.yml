@@ -25,6 +25,10 @@ jobs:
         run: |
           poetry install --no-interaction --no-ansi
 
+      - name: Ensure data directory exists
+        run: |
+          mkdir -p data
+
       - name: Run tests
         env:
           QUIZ_DATABASE_URL: sqlite:///./data/ci_quiz_data.db

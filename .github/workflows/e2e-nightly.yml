@@ -22,6 +22,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry nox
 
+      - name: Ensure data directory exists
+        run: |
+          mkdir -p data
+
       - name: Run E2E tests via nox
         env:
           QUIZ_DATABASE_URL: sqlite:///./data/ci_quiz_data.db
