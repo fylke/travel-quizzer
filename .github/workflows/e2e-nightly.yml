@@ -1,0 +1,29 @@
+name: Nightly E2E Tests
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # Every day at 03:00 UTC
+  workflow_dispatch: # Allow manual triggers
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.14'
+
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry nox
+
+      - name: Run E2E tests via nox
+        env:
+          QUIZ_DATABASE_URL: sqlite:///./data/ci_quiz_data.db
+        run: |
+          nox -s e2e
