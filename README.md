@@ -46,54 +46,61 @@ travel-quizzer/
 
 ### Prerequisites
 - Python 3.10 or higher
-- Poetry (recommended) or pip
+- Git
 
 ### Installation
 
-1. **Navigate to the project directory:**
+1. **Clone and enter the project:**
    ```bash
+   git clone <repo-url>
    cd travel-quizzer
    ```
 
-2. **Install dependencies with Poetry:**
+2. **Create a virtual environment and install dependencies:**
    ```bash
-   poetry install
-   ```
-   
-   Or if using pip directly:
-   ```bash
-   pip install -r requirements.txt
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -e .
    ```
 
-3. **(Optional) Activate Poetry virtual environment:**
+3. **(Optional) Auto-activate the venv with direnv:**
+
+   If you'd like the virtual environment to activate automatically whenever you enter the project directory:
+
    ```bash
-   poetry shell
+   # Install direnv (Ubuntu/Debian)
+   sudo apt install direnv
+
+   # Add the hook to your shell (bash)
+   echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
+   source ~/.bashrc
+
+   # Create .envrc and allow it
+   echo 'source .venv/bin/activate' > .envrc
+   direnv allow
    ```
+
+   Now the venv activates/deactivates automatically as you enter/leave the directory.
 
 ## Running Unit Tests
 
-From the project root, run:
+From the project root (with the venv active), run:
 ```bash
-poetry run python -m unittest discover -s test
+python -m pytest test/
 ```
 
-Or with the explicit module path:
+Or a specific test file:
 ```bash
-poetry run python -m unittest test.test_main
+python -m pytest test/test_main.py
 ```
 
 ## Running the Application
 
 ### Local Development
 
-1. **Start the Flask server with Poetry:**
+1. **Start the Flask server:**
    ```bash
-   poetry run python -m src.main
-   ```
-   
-   Or if using pip:
-   ```bash
-   python -m src.main
+   python -m main
    ```
 
    You should see output like:
@@ -348,9 +355,10 @@ MIT License - feel free to use and modify this project!
 ## Support
 
 If you encounter any issues:
-1. Make sure Python 3.7+ is installed
-2. Ensure dependencies are installed: `pip install -r requirements.txt`
-3. Check that the server is running on `http://localhost:5000`
-4. Check browser console for any JavaScript errors (F12 → Console)
+1. Make sure Python 3.10+ is installed
+2. Ensure the venv is active: `source .venv/bin/activate`
+3. Ensure dependencies are installed: `pip install -e .`
+4. Check that the server is running on `http://localhost:5000`
+5. Check browser console for any JavaScript errors (F12 → Console)
 
 Enjoy the quiz! 🌍✨
