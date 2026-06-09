@@ -1,0 +1,93 @@
+"""End-to-end tests for authentication flows."""
+
+import pytest
+from playwright.sync_api import Page, expect
+
+
+@pytest.fixture(autouse=True)
+def setup(clean_db):
+    """Ensure a clean database for each test."""
+
+
+def test_welcome_screen_loads(page: Page, base_url: str):
+    """The welcome screen should display login form elements."""
+    page.goto(base_url)
+
+    expect(page.locator("#authHeading")).to_have_text("✈️ Travel Quiz")
+    expect(page.locator("#email")).to_be_visible()
+    expect(page.locator("#password")).to_be_visible()
+    expect(page.locator("#authButton")).to_have_text("Log In")
+
+
+def test_register_new_user(page: Page, base_url: str):
+    """A new user can register and is taken to the quiz screen."""
+    page.goto(base_url)
+
+    # Switch to register mode
+    page.click("#switchToRegister")
+    expect(page.locator("#name")).to_be_visible()
+
+    # Fill in registration form
+    page.fill("#name", "Test User")
+    page.fill("#email", "test@example.com")
+    page.fill("#password", "password123")
+    page.click("#authButton")
+
+    # Should navigate to quiz screen
+    expect(page.locator("#quizScreen")).to_be_visible(timeout=5000)
+
+
+def test_login_with_invalid_credentials(page: Page, base_url: str):
+    """Login with wrong credentials should show an error."""
+    page.goto(base_url)
+
+    page.fill("#email", "nonexistent@example.com")
+    page.fill("#password", "wrongpassword")
+    page.click("#authButton")
+
+    # Should remain on the welcome screen (quiz screen should not appear)
+    expect(page.locator("#quizScreen")).to_be_hidden()
+    expect(page.locator("#welcomeScreen")).to_be_visible()
+
+
+def test_login_after_registration(page: Page, base_url: str):
+    """A user can register, log out, then log in with the same credentials."""
+    page.goto(base_url)
+
+    # Register first
+    page.click("#switchToRegister")
+    page.fill("#name", "Login Test")
+    page.fill("#email", "login@example.com")
+    page.fill("#password", "mypassword")
+    page.click("#authButton")
+    expect(page.locator("#quizScreen")).to_be_visible(timeout=5000)
+
+    # Log out via API to clear session, then reload
+    page.evaluate("() => fetch('/api/logout', { method: 'POST' })")
+    page.goto(base_url)
+    expect(page.locator("#welcomeScreen")).to_be_visible(timeout=5000)
+
+    # Now log in
+    page.fill("#email", "login@example.com")
+    page.fill("#password", "mypassword")
+    page.click("#authButton")
+
+    expect(page.locator("#quizScreen")).to_be_visible(timeout=5000)
+
+
+def test_toggle_between_login_and_register(page: Page, base_url: str):
+    """User can switch between login and register modes."""
+    page.goto(base_url)
+
+    # Initially in login mode - name field has .hidden class
+    expect(page.locator("#name")).to_have_class("hidden")
+    expect(page.locator("#switchToRegister")).to_be_visible()
+
+    # Switch to register
+    page.click("#switchToRegister")
+    expect(page.locator("#name")).not_to_have_class("hidden")
+    expect(page.locator("#switchToLogin")).to_be_visible()
+
+    # Switch back to login
+    page.click("#switchToLogin")
+    expect(page.locator("#name")).to_have_class("hidden")
