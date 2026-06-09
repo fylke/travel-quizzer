@@ -46,6 +46,7 @@ travel-quizzer/
 
 ### Prerequisites
 - Python 3.10 or higher
+- [Poetry](https://python-poetry.org/docs/#installation)
 - Git
 
 ### Installation
@@ -56,14 +57,17 @@ travel-quizzer/
    cd travel-quizzer
    ```
 
-2. **Create a virtual environment and install dependencies:**
+2. **Install dependencies with Poetry:**
    ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -e .
+   poetry install
    ```
 
-3. **(Optional) Auto-activate the venv with direnv:**
+3. **Activate the virtual environment:**
+   ```bash
+   poetry shell
+   ```
+
+4. **(Optional) Auto-activate the venv with direnv:**
 
    If you'd like the virtual environment to activate automatically whenever you enter the project directory:
 
@@ -75,8 +79,7 @@ travel-quizzer/
    echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
    source ~/.bashrc
 
-   # Create .envrc and allow it
-   echo 'source .venv/bin/activate' > .envrc
+   # Allow the .envrc included in the repo
    direnv allow
    ```
 
@@ -84,14 +87,14 @@ travel-quizzer/
 
 ## Running Unit Tests
 
-From the project root (with the venv active), run:
+From the project root, run:
 ```bash
-python -m pytest test/
+poetry run python -m unittest discover -s test -v
 ```
 
-Or a specific test file:
+Or via nox:
 ```bash
-python -m pytest test/test_main.py
+nox -s tests
 ```
 
 ## Running the Application
@@ -100,7 +103,7 @@ python -m pytest test/test_main.py
 
 1. **Start the Flask server:**
    ```bash
-   python -m main
+   poetry run python -m main
    ```
 
    You should see output like:
@@ -356,8 +359,8 @@ MIT License - feel free to use and modify this project!
 
 If you encounter any issues:
 1. Make sure Python 3.10+ is installed
-2. Ensure the venv is active: `source .venv/bin/activate`
-3. Ensure dependencies are installed: `pip install -e .`
+2. Make sure Poetry is installed: `poetry --version`
+3. Ensure dependencies are installed: `poetry install`
 4. Check that the server is running on `http://localhost:5000`
 5. Check browser console for any JavaScript errors (F12 → Console)
 

@@ -113,7 +113,6 @@ def get_quiz():
     return jsonify({
         "id": random_destination.id,
         "hint": hint_text,
-        "name": random_destination.name,
         "images": random_destination.images
     })
 
