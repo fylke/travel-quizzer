@@ -1,16 +1,11 @@
-// Quiz State
+// Quiz State — only tracks the authenticated user; all quiz progress lives on the backend.
 let quizState = {
-    id: 0,
-    hintDifficulty: 5,
-    remainingGuesses: 3,
-    user: null,
-    destination: null,
-    answered: false,
-    lastScore: 0
+    user: null
 };
 
 const API_BASE = window.location.origin;
 let authMode = 'login';
+let submitting = false; // guards against double-click on submit
 
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(screen => {
@@ -96,6 +91,17 @@ async function handleAuth() {
     }
 }
 
+function displayQuiz(data) {
+    submitting = false;
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('hint').textContent = data.hint;
+    updateHintDisplay(data.hint, data.hintDifficulty, data.remainingGuesses);
+    document.getElementById('image1').src = data.images[0];
+    document.getElementById('image2').src = data.images[1];
+    document.getElementById('answerInput').value = '';
+    document.getElementById('answerInput').focus();
+}
+
 async function loadQuestion() {
     try {
         const response = await fetch(`${API_BASE}/api/quiz`);
@@ -105,37 +111,24 @@ async function loadQuestion() {
             return;
         }
 
-        quizState.destination = await response.json();
-        quizState.id = quizState.destination.id;
-        quizState.hintDifficulty = 5;
-        quizState.remainingGuesses = 3;
-        quizState.answered = false;
-        quizState.lastScore = 0;
-
-        document.getElementById('progressFill').style.width = '100%';
-        document.getElementById('hint').textContent = quizState.destination.hint;
-        updateHintDisplay(quizState.destination.hint);
-        document.getElementById('image1').src = quizState.destination.images[0];
-        document.getElementById('image2').src = quizState.destination.images[1];
-        document.getElementById('answerInput').value = '';
-        document.getElementById('answerInput').focus();
+        const data = await response.json();
+        displayQuiz(data);
     } catch (error) {
         console.error('Error loading quiz:', error);
         alert('Failed to load quiz. Please refresh the page.');
     }
 }
 
-function updateHintDisplay(hintText) {
-    const hintDifficulty = quizState.hintDifficulty;
-    const potentialPoints = hintDifficulty * quizState.remainingGuesses;
+function updateHintDisplay(hintText, hintDifficulty, remainingGuesses) {
+    const potentialPoints = hintDifficulty * remainingGuesses;
 
     document.getElementById('hint').textContent = hintText;
-    document.getElementById('hintProgress').textContent = `Hint difficulty is ${hintDifficulty}, and you have ${quizState.remainingGuesses} remaining guesses.`;
+    document.getElementById('hintProgress').textContent = `Hint difficulty is ${hintDifficulty}, and you have ${remainingGuesses} remaining guesses.`;
     document.getElementById('hintPoints').textContent = `If you guess correctly, you will get ${potentialPoints} points.`;
 }
 
 async function submitAnswer() {
-    if (quizState.answered) return;
+    if (submitting) return;
 
     const answerInput = document.getElementById('answerInput');
     const userAnswer = answerInput.value.trim();
@@ -144,76 +137,59 @@ async function submitAnswer() {
         return;
     }
 
-    quizState.answered = true;
+    submitting = true;
     try {
         const response = await fetch(`${API_BASE}/api/check-answer`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                questionId: quizState.destination.id,
-                answer: userAnswer,
-                hintDifficulty: quizState.hintDifficulty,
-                remainingGuesses: quizState.remainingGuesses
-            })
+            body: JSON.stringify({ answer: userAnswer })
         });
 
         const result = await response.json();
         if (!response.ok) {
             alert(result.error || 'Error checking answer');
-            quizState.answered = false;
+            submitting = false;
             return;
         }
 
         if (result.correct) {
-            quizState.lastScore = result.points;
             showFeedback(true, result.points, result.answer);
+        } else if (result.remainingGuesses !== undefined && result.remainingGuesses > 0) {
+            // Wrong but still has guesses — backend returned next hint
+            updateHintDisplay(result.hint, result.hintDifficulty, result.remainingGuesses);
+            document.getElementById('answerInput').value = '';
+            document.getElementById('answerInput').focus();
+            submitting = false;
         } else {
-            quizState.remainingGuesses -= 1;
-            if (quizState.remainingGuesses > 0 && quizState.hintDifficulty > 1) {
-                quizState.hintDifficulty -= 1;
-                await fetchHint(quizState.hintDifficulty);
-                quizState.answered = false;
-            } else {
-                showFeedback(false, 0, result.answer);
-            }
+            // Out of guesses
+            showFeedback(false, 0, result.answer);
         }
     } catch (error) {
         console.error('Error checking answer:', error);
         alert('Error checking answer');
-        quizState.answered = false;
+        submitting = false;
     }
 }
 
 async function skipHint() {
-    if (quizState.remainingGuesses <= 0) {
-        showFeedback(false, 0, quizState.destination.name);
-        return;
-    }
-
-    quizState.hintDifficulty = Math.max(1, quizState.hintDifficulty - 1);
-    quizState.remainingGuesses -= 1;
-
-    if (quizState.hintDifficulty > 0) {
-        await fetchHint(quizState.hintDifficulty);
-    } else {
-        showFeedback(false, 0, quizState.destination.name);
-    }
+    await fetchHint();
 }
 
-async function fetchHint(wantedHintDifficulty) {
-    if (wantedHintDifficulty <= 0) {
-        showFeedback(false, 0, quizState.destination.name);
-        return;
-    }
-
+async function fetchHint() {
     document.getElementById('hint').textContent = 'Loading hint...';
     try {
-        const response = await fetch(`${API_BASE}/api/hint?questionId=${quizState.id}&difficulty=${wantedHintDifficulty}`);
+        const response = await fetch(`${API_BASE}/api/hint`);
         const result = await response.json();
         if (!response.ok) {
+            if (response.status === 404) {
+                document.getElementById('hint').textContent = 'No more hints remaining, you might as well guess now!';
+                document.getElementById('hintProgress').textContent = '';
+                document.getElementById('hintPoints').textContent = '';
+                return;
+            }
             throw new Error(result.error || 'Failed to fetch hint');
         }
-        updateHintDisplay(result.hint);
+        updateHintDisplay(result.hint, result.hintDifficulty, result.remainingGuesses);
         document.getElementById('answerInput').value = '';
         document.getElementById('answerInput').focus();
     } catch (error) {
@@ -223,7 +199,6 @@ async function fetchHint(wantedHintDifficulty) {
 }
 
 function showFeedback(isCorrect, points, correctAnswer) {
-    quizState.lastScore = points;
     showScreen('feedbackScreen');
 
     const feedbackStatus = document.getElementById('feedbackStatus');
@@ -244,14 +219,17 @@ function showFeedback(isCorrect, points, correctAnswer) {
             <p class="points-earned">0 Points</p>
         `;
     }
+
+    // Store points in a data attribute for the results screen
+    document.getElementById('feedbackScreen').dataset.lastScore = points;
 }
 
 function endQuiz() {
     showScreen('resultsScreen');
-    document.getElementById('finalScore').textContent = quizState.lastScore;
+    const score = parseInt(document.getElementById('feedbackScreen').dataset.lastScore || '0', 10);
+    document.getElementById('finalScore').textContent = score;
 
     let message = '';
-    const score = quizState.lastScore;
     if (score >= 15) {
         message = '🌟 Outstanding! You are a true travel expert!';
     } else if (score >= 12) {
@@ -311,20 +289,7 @@ async function runSpecificQuiz() {
         }
         const data = await response.json();
         showScreen('quizScreen');
-        quizState.destination = data;
-        quizState.id = data.id;
-        quizState.hintDifficulty = 5;
-        quizState.remainingGuesses = 3;
-        quizState.answered = false;
-        quizState.lastScore = 0;
-
-        document.getElementById('progressFill').style.width = '100%';
-        document.getElementById('hint').textContent = data.hint;
-        updateHintDisplay(data.hint);
-        document.getElementById('image1').src = data.images[0];
-        document.getElementById('image2').src = data.images[1];
-        document.getElementById('answerInput').value = '';
-        document.getElementById('answerInput').focus();
+        displayQuiz(data);
     } catch (error) {
         console.error('Error starting specific quiz:', error);
         alert('Failed to load quiz.');

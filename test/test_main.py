@@ -148,50 +148,56 @@ class MainAppTestCase(unittest.TestCase):
 
         data = response.get_json()
         self.assertIsInstance(data, dict)
-        self.assertEqual(len(data), 3) # Should contain id, hint, and images
         self.assertIn('id', data)
+        self.assertIn('hint', data)
+        self.assertIn('hintDifficulty', data)
+        self.assertIn('remainingGuesses', data)
         self.assertIn('images', data)
+        self.assertEqual(data['hintDifficulty'], 5)
+        self.assertEqual(data['remainingGuesses'], 3)
         images = data.get('images')
         self.assertGreaterEqual(len(images), 2)
 
     def test_check_answer_returns_correct_for_valid_answer(self):
         question = self.quiz_data[0]
+        # Start a quiz first so server-side state exists
+        self.client.get(f'/api/quiz/{question["id"]}')
+
         response = self.client.post('/api/check-answer', json={
-            'questionId': question['id'],
-            'answer': question['correct_answers'][0],
-            'hintDifficulty': 5,
-            'remainingGuesses': 3
+            'answer': question['correct_answers'][0]
         })
         self.assertEqual(response.status_code, 200)
 
         data = response.get_json()
         self.assertTrue(data['correct'])
-        self.assertEqual(data['points'], 15)  # Hint difficulty * Remaining guesses
+        self.assertEqual(data['points'], 15)  # Hint difficulty (5) * Remaining guesses (3)
         self.assertEqual(data['answer'], question['destination'])
 
     def test_check_answer_returns_incorrect_for_invalid_answer(self):
         question = self.quiz_data[0]
+        # Start a quiz first so server-side state exists
+        self.client.get(f'/api/quiz/{question["id"]}')
+
         response = self.client.post('/api/check-answer', json={
-            'questionId': question['id'],
-            'answer': 'not a valid place',
-            'hintDifficulty': 0,
-            'remainingGuesses': 1
+            'answer': 'not a valid place'
         })
         self.assertEqual(response.status_code, 200)
 
         data = response.get_json()
         self.assertFalse(data['correct'])
-        self.assertEqual(data['points'], 0)
+        # Still has guesses left, so we get remainingGuesses and a new hint
+        self.assertIn('remainingGuesses', data)
+        self.assertEqual(data['remainingGuesses'], 2)
 
     def test_check_answer_returns_404_for_missing_question(self):
+        # No active quiz — should get 404
         response = self.client.post('/api/check-answer', json={
-            'questionId': 9999,
             'answer': 'tokyo'
         })
         self.assertEqual(response.status_code, 404)
 
         data = response.get_json()
-        self.assertEqual(data['error'], 'Question not found')
+        self.assertEqual(data['error'], 'No active quiz')
 
     def test_register_endpoint_creates_user_and_sets_session(self):
         response = self.client.post('/api/register', json={

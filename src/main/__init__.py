@@ -134,9 +134,24 @@ def get_quiz():
     hint_difficulty = 5  # Start with the hardest hint
     hint_text = getattr(random_destination, f"hint{hint_difficulty}", '')
 
+    # Create or reset the quiz result to track server-side state
+    user = get_current_user()
+    # End any previously active quiz
+    QuizResult.query.filter_by(user_id=user.id, ongoing=True).update({"ongoing": False})
+    quiz_result = QuizResult.query.filter_by(user_id=user.id, destination_id=random_destination.id).first()
+    if quiz_result is None:
+        quiz_result = QuizResult(user_id=user.id, destination_id=random_destination.id)
+    quiz_result.hint_difficulty = hint_difficulty
+    quiz_result.remaining_guesses = 3
+    quiz_result.ongoing = True
+    db.session.add(quiz_result)
+    db.session.commit()
+
     return jsonify({
         "id": random_destination.id,
         "hint": hint_text,
+        "hintDifficulty": hint_difficulty,
+        "remainingGuesses": 3,
         "images": random_destination.images
     })
 
@@ -152,9 +167,24 @@ def get_specific_quiz(destination_id):
     hint_difficulty = 5
     hint_text = getattr(destination, f"hint{hint_difficulty}", '')
 
+    # Create or reset the quiz result to track server-side state
+    user = get_current_user()
+    # End any previously active quiz
+    QuizResult.query.filter_by(user_id=user.id, ongoing=True).update({"ongoing": False})
+    quiz_result = QuizResult.query.filter_by(user_id=user.id, destination_id=destination.id).first()
+    if quiz_result is None:
+        quiz_result = QuizResult(user_id=user.id, destination_id=destination.id)
+    quiz_result.hint_difficulty = hint_difficulty
+    quiz_result.remaining_guesses = 3
+    quiz_result.ongoing = True
+    db.session.add(quiz_result)
+    db.session.commit()
+
     return jsonify({
         "id": destination.id,
         "hint": hint_text,
+        "hintDifficulty": hint_difficulty,
+        "remainingGuesses": 3,
         "images": destination.images
     })
 
@@ -162,62 +192,84 @@ def get_specific_quiz(destination_id):
 @app.route('/api/hint', methods=['GET'])
 @login_required
 def get_hint():
-    """Get a specific hint for a destination by difficulty level"""
-    destination_id = request.args.get('questionId', type=int)
-    difficulty = request.args.get('difficulty', type=int)
+    """Fetch the next hint for the user's active quiz, decrementing difficulty."""
+    user = get_current_user()
+    quiz_result = QuizResult.query.filter_by(user_id=user.id, ongoing=True).first()
+    if quiz_result is None:
+        return jsonify({"error": "No active quiz"}), 404
 
-    if destination_id is None or difficulty is None:
-        return jsonify({"error": "Missing questionId or difficulty parameter"}), 400
+    # Decrement hint difficulty to reveal an easier hint
+    new_difficulty = quiz_result.hint_difficulty - 1
+    if new_difficulty < 1:
+        return jsonify({"error": "No more hints remaining"}), 404
 
-    if not (1 <= difficulty <= 5):
-        return jsonify({"error": "Difficulty must be between 1 and 5"}), 400
-
-    question = Destination.query.filter_by(id=destination_id).first()
+    question = Destination.query.filter_by(id=quiz_result.destination_id).first()
     if not question:
         return jsonify({"error": "Question not found"}), 404
 
-    hint_text = getattr(question, f"hint{difficulty}", '')
+    quiz_result.hint_difficulty = new_difficulty
+    db.session.commit()
+
+    hint_text = getattr(question, f"hint{new_difficulty}", '')
     return jsonify({
         "hint": hint_text,
-        "questionId": destination_id,
-        "difficulty": difficulty
+        "hintDifficulty": new_difficulty,
+        "remainingGuesses": quiz_result.remaining_guesses
     })
 
 
 @app.route('/api/check-answer', methods=['POST'])
 @login_required
 def check_answer():
-    """Check if the answer is correct and return points"""
+    """Check if the answer is correct, using server-side state for scoring."""
     data = request.json or {}
-    destination_id = data.get('questionId')
     user_answer = (data.get('answer') or '').lower().strip()
-    hint_difficulty = data.get('hintDifficulty', 0)
-    remaining_guesses = data.get('remainingGuesses', 1)
 
-    question = Destination.query.filter_by(id=destination_id).first()
+    user = get_current_user()
+    quiz_result = QuizResult.query.filter_by(user_id=user.id, ongoing=True).first()
+    if quiz_result is None:
+        return jsonify({"error": "No active quiz"}), 404
+
+    question = Destination.query.filter_by(id=quiz_result.destination_id).first()
     if not question:
         return jsonify({"error": "Question not found"}), 404
 
     is_correct = user_answer in question.correct_answers
-    points = hint_difficulty * remaining_guesses if is_correct else 0
 
-    user = get_current_user()
-    quiz_result = QuizResult.query.filter_by(user_id=user.id, destination_id=destination_id).first()
-    if quiz_result is None:
-        quiz_result = QuizResult(
-            user_id=user.id,
-            destination_id=destination_id
-        )
-    quiz_result.hint_difficulty = hint_difficulty
-    quiz_result.remaining_guesses = remaining_guesses
-    quiz_result.ongoing = not is_correct and remaining_guesses > 0
-    db.session.add(quiz_result)
+    if is_correct:
+        points = quiz_result.hint_difficulty * quiz_result.remaining_guesses
+        quiz_result.ongoing = False
+        db.session.commit()
+        return jsonify({
+            "correct": True,
+            "answer": question.name,
+            "points": points
+        })
+
+    # Wrong answer — decrement remaining guesses
+    quiz_result.remaining_guesses -= 1
+    if quiz_result.remaining_guesses <= 0:
+        quiz_result.ongoing = False
+        db.session.commit()
+        return jsonify({
+            "correct": False,
+            "answer": question.name,
+            "points": 0
+        })
+
+    # Still has guesses left — also reveal next hint
+    new_difficulty = quiz_result.hint_difficulty - 1
+    if new_difficulty >= 1:
+        quiz_result.hint_difficulty = new_difficulty
+
     db.session.commit()
 
+    hint_text = getattr(question, f"hint{quiz_result.hint_difficulty}", '')
     return jsonify({
-        "correct": is_correct,
-        "answer": question.name,
-        "points": points
+        "correct": False,
+        "remainingGuesses": quiz_result.remaining_guesses,
+        "hintDifficulty": quiz_result.hint_difficulty,
+        "hint": hint_text
     })
 
 
