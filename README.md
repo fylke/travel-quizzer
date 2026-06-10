@@ -37,8 +37,8 @@ travel-quizzer/
 ├── test/
 │   └── test_main.py          # Test suite
 ├── pyproject.toml            # Poetry configuration
-├── Dockerfile                # Container build configuration
-├── docker-compose.yml        # Docker Compose orchestration
+├── Containerfile             # Container build configuration
+├── podman-compose.yml        # Podman Compose orchestration
 └── README.md                 # This file
 ```
 
@@ -118,17 +118,17 @@ nox -s tests
 
 3. **Enter your name and start the quiz!**
 
-### Docker
+### Podman
 
 #### Prerequisites
-- Docker installed ([Get Docker](https://docs.docker.com/get-docker/))
-- Docker Compose installed ([Install Docker Compose](https://docs.docker.com/compose/install/))
+- Podman installed ([Get Podman](https://podman.io/docs/installation))
+- Podman Compose installed (`pip install podman-compose`)
 
-#### Running with Docker Compose (Recommended)
+#### Running with Podman Compose (Recommended)
 
 1. **Build and start the container:**
    ```bash
-   docker-compose up --build
+   podman-compose -f podman-compose.yml up --build
    ```
 
 2. **Open your browser and go to:**
@@ -138,19 +138,19 @@ nox -s tests
 
 3. **Stop the container:**
    ```bash
-   docker-compose down
+   podman-compose -f podman-compose.yml down
    ```
 
-#### Running with Docker Directly
+#### Running with Podman Directly
 
 1. **Build the image:**
    ```bash
-   docker build -t travel-quizzer:latest .
+   podman build -t travel-quizzer:latest .
    ```
 
 2. **Run the container:**
    ```bash
-   docker run -p 9696:5000 travel-quizzer:latest
+   podman run -p 9696:5000 travel-quizzer:latest
    ```
 
 3. **Open your browser and go to:**
@@ -160,32 +160,32 @@ nox -s tests
 
 4. **Stop the container:**
    ```bash
-   docker stop <container_id>
+   podman stop <container_id>
    ```
 
-#### Pushing to a Docker Registry
+#### Pushing to a Container Registry
 
 For CI/CD or sharing with others:
 
 1. **Tag the image:**
    ```bash
-   docker tag travel-quizzer:latest <your_registry>/<your_username>/travel-quizzer:latest
+   podman tag travel-quizzer:latest <your_registry>/<your_username>/travel-quizzer:latest
    ```
-   Example: `docker tag travel-quizzer:latest docker.io/myusername/travel-quizzer:latest`
+   Example: `podman tag travel-quizzer:latest docker.io/myusername/travel-quizzer:latest`
 
 2. **Login to your registry:**
    ```bash
-   docker login
+   podman login <your_registry>
    ```
 
 3. **Push the image:**
    ```bash
-   docker push <your_registry>/<your_username>/travel-quizzer:latest
+   podman push <your_registry>/<your_username>/travel-quizzer:latest
    ```
 
 4. **Pull and run from registry:**
    ```bash
-   docker run -p 9696:5000 <your_registry>/<your_username>/travel-quizzer:latest
+   podman run -p 9696:5000 <your_registry>/<your_username>/travel-quizzer:latest
    ```
 
 

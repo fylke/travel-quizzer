@@ -4,11 +4,15 @@ FROM python:3.11-slim
 # Set working directory in container
 WORKDIR /app
 
-# Copy requirements file
-COPY requirements.txt .
+# Install Poetry
+RUN pip install --no-cache-dir poetry
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy dependency files
+COPY pyproject.toml poetry.lock ./
+
+# Install production dependencies (no dev deps, no virtualenv inside container)
+RUN poetry config virtualenvs.create false && \
+    poetry install --only main --no-interaction --no-ansi --no-root
 
 # Copy application code and static files
 COPY src/ ./src/
@@ -20,10 +24,6 @@ ENV PYTHONPATH=/app/src
 
 # Expose port 5000
 EXPOSE 5000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/quiz').read()" || exit 1
 
 # Run Flask app
 CMD ["python", "-m", "main"]

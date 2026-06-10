@@ -2,7 +2,7 @@ services:
   travel-quizzer:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Containerfile
     container_name: travel-quizzer
     ports:
       - "9696:5000"
