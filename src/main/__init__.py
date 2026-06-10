@@ -107,6 +107,21 @@ def me():
     return jsonify({"id": user.id, "name": user.name, "email": user.email})
 
 
+@app.route('/api/status', methods=['GET'])
+@login_required
+def get_status():
+    """Return quiz stats for the current user."""
+    user = get_current_user()
+    results = QuizResult.query.filter_by(user_id=user.id).all()
+    completed = [r for r in results if not r.ongoing]
+    total_points = sum(r.hint_difficulty * r.remaining_guesses for r in completed if r.remaining_guesses > 0)
+    return jsonify({
+        "quizzesCompleted": len(completed),
+        "totalPoints": total_points,
+        "quizzesOngoing": len([r for r in results if r.ongoing]),
+    })
+
+
 @app.route('/api/quiz', methods=['GET'])
 @login_required
 def get_quiz():
@@ -123,6 +138,24 @@ def get_quiz():
         "id": random_destination.id,
         "hint": hint_text,
         "images": random_destination.images
+    })
+
+
+@app.route('/api/quiz/<int:destination_id>', methods=['GET'])
+@login_required
+def get_specific_quiz(destination_id):
+    """Return a specific destination for a quiz."""
+    destination = Destination.query.filter_by(id=destination_id).first()
+    if not destination:
+        return jsonify({"error": "Destination not found"}), 404
+
+    hint_difficulty = 5
+    hint_text = getattr(destination, f"hint{hint_difficulty}", '')
+
+    return jsonify({
+        "id": destination.id,
+        "hint": hint_text,
+        "images": destination.images
     })
 
 

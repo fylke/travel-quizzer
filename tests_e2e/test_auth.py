@@ -20,7 +20,7 @@ def test_welcome_screen_loads(page: Page, base_url: str):
 
 
 def test_register_new_user(page: Page, base_url: str):
-    """A new user can register and is taken to the quiz screen."""
+    """A new user can register and is taken to the status screen."""
     page.goto(base_url)
 
     # Switch to register mode
@@ -33,8 +33,8 @@ def test_register_new_user(page: Page, base_url: str):
     page.fill("#password", "password123")
     page.click("#authButton")
 
-    # Should navigate to quiz screen
-    expect(page.locator("#quizScreen")).to_be_visible(timeout=5000)
+    # Should navigate to status screen
+    expect(page.locator("#statusScreen")).to_be_visible(timeout=5000)
 
 
 def test_login_with_invalid_credentials(page: Page, base_url: str):
@@ -60,7 +60,7 @@ def test_login_after_registration(page: Page, base_url: str):
     page.fill("#email", "login@example.com")
     page.fill("#password", "mypassword")
     page.click("#authButton")
-    expect(page.locator("#quizScreen")).to_be_visible(timeout=5000)
+    expect(page.locator("#statusScreen")).to_be_visible(timeout=5000)
 
     # Log out via API to clear session, then reload
     page.evaluate("() => fetch('/api/logout', { method: 'POST' })")
@@ -72,7 +72,7 @@ def test_login_after_registration(page: Page, base_url: str):
     page.fill("#password", "mypassword")
     page.click("#authButton")
 
-    expect(page.locator("#quizScreen")).to_be_visible(timeout=5000)
+    expect(page.locator("#statusScreen")).to_be_visible(timeout=5000)
 
 
 def test_toggle_between_login_and_register(page: Page, base_url: str):

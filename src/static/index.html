@@ -47,6 +47,38 @@
             </div>
         </div>
 
+        <div id="statusScreen" class="screen hidden">
+            <div class="status-content">
+                <h1>📊 Your Quiz Status</h1>
+                <div class="stats-section">
+                    <div class="stat-card">
+                        <span class="stat-label">Quizzes Completed</span>
+                        <span id="statsCompleted" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Total Points</span>
+                        <span id="statsPoints" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Ongoing Quizzes</span>
+                        <span id="statsOngoing" class="stat-value">0</span>
+                    </div>
+                </div>
+
+                <div class="quiz-actions">
+                    <div class="specific-quiz-section">
+                        <label for="specificQuizId">Run a specific quiz (enter ID):</label>
+                        <div class="input-row">
+                            <input type="number" id="specificQuizId" placeholder="Quiz ID" min="1">
+                            <button onclick="runSpecificQuiz()" class="btn btn-primary" id="runSpecificQuizBtn">Run Specific Quiz</button>
+                        </div>
+                    </div>
+                    <button onclick="runRandomQuiz()" class="btn btn-primary" id="runRandomQuizBtn">Run Random Quiz</button>
+                    <button onclick="handleLogout()" class="btn btn-secondary" id="logoutBtn">Logout</button>
+                </div>
+            </div>
+        </div>
+
         <div id="quizScreen" class="screen hidden">
             <div class="quiz-header">
                 <div class="progress-info">
@@ -95,7 +127,7 @@
             <div class="feedback-content">
                 <div id="feedbackStatus" class="feedback-status"></div>
                 <div id="feedbackDetails" class="feedback-details"></div>
-                <button onclick="endQuiz()" class="btn btn-primary">Done</button>
+                <button onclick="backToStatus()" class="btn btn-primary">Back to Status</button>
             </div>
         </div>
 
@@ -112,7 +144,7 @@
                 </div>
                 <div class="button-group">
                     <button onclick="retakeQuiz()" class="btn btn-primary">Retake Quiz</button>
-                    <button onclick="resetQuiz()" class="btn btn-secondary">Back to Start</button>
+                    <button onclick="backToStatus()" class="btn btn-secondary">Back to Status</button>
                 </div>
             </div>
         </div>
