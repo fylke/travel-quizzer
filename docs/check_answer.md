@@ -30,7 +30,7 @@ sequenceDiagram
             Backend->>Database: UPDATE quiz_result SET remaining_guesses = remaining_guesses - 1,<br/>hint_difficulty = hint_difficulty - 1
             Database->>Backend: OK
             Backend->>Frontend: (200, {correct: false, remainingGuesses: 2,<br/>hintDifficulty: 3, hint: "Next easier hint text"})
-            Frontend->>User: "Shake" UI and flash red - Display next hint<br/>and deduct remaining guesses
+            Frontend->>User: "Shake" UI and flash red - Display next hint<br/>and remaining guesses
         else Wrong answer and out of guesses
             Backend->>Database: UPDATE quiz_result SET remaining_guesses = 0, ongoing = false
             Database->>Backend: OK

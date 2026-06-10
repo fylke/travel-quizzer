@@ -11,8 +11,6 @@ sequenceDiagram
         User->>Frontend: Clicks "Run Random Quiz"
     else Skip hint
         User->>Frontend: Clicks "Skip Hint"
-    else Guessed wrong
-        User->>Frontend: Clicks "Answer" with an incorrect guess
     end
 
     Frontend->>Backend: GET /api/hint (sessionId: "token")
@@ -23,7 +21,7 @@ sequenceDiagram
     alt no active quiz
         Backend->>Frontend: (404, {error: "No active quiz"})
         Frontend->>User: Display error message
-    else hint_difficulty - 1 < 1 (no more hints)
+    else hint_difficulty = 0
         Backend->>Frontend: (404, {error: "No more hints remaining"})
         Frontend->>User: Remain on quiz screen and display message<br/>"No more hints remaining, you might as well guess now!"
     else hint available
