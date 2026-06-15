@@ -46,7 +46,7 @@ travel-quizzer/
 
 ### Prerequisites
 - Python 3.10 or higher
-- [Poetry](https://python-poetry.org/docs/#installation)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - Git
 
 ### Installation
@@ -57,14 +57,9 @@ travel-quizzer/
    cd travel-quizzer
    ```
 
-2. **Install dependencies with Poetry:**
+2. **Install dependencies with uv:**
    ```bash
-   poetry install
-   ```
-
-3. **Activate the virtual environment:**
-   ```bash
-   poetry shell
+   uv sync
    ```
 
 4. **(Optional) Auto-activate the venv with direnv:**
@@ -87,14 +82,16 @@ travel-quizzer/
 
 ## Running Unit Tests
 
-From the project root, run:
 ```bash
-poetry run python -m unittest discover -s test -v
+uv run unit-test
 ```
 
-Or via nox:
+## Running E2E Tests
+
 ```bash
-nox -s tests
+uv sync --group test
+uv run playwright install
+uv run e2e-test
 ```
 
 ## Running the Application
@@ -103,7 +100,7 @@ nox -s tests
 
 1. **Start the Flask server:**
    ```bash
-   poetry run python -m main
+   uv run python -m main
    ```
 
    You should see output like:
@@ -359,8 +356,8 @@ MIT License - feel free to use and modify this project!
 
 If you encounter any issues:
 1. Make sure Python 3.10+ is installed
-2. Make sure Poetry is installed: `poetry --version`
-3. Ensure dependencies are installed: `poetry install`
+2. Make sure uv is installed: `uv --version`
+3. Ensure dependencies are installed: `uv sync`
 4. Check that the server is running on `http://localhost:5000`
 5. Check browser console for any JavaScript errors (F12 → Console)
 

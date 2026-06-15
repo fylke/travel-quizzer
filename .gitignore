@@ -8,9 +8,6 @@ __pycache__/
 *.egg-info/
 dist/
 
-# Nox
-.nox/
-
 # IDE
 .vscode/
 .idea/

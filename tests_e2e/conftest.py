@@ -4,6 +4,8 @@ Starts the Flask app on a free port in a background thread before
 the test session, and tears it down afterward.
 """
 
+import os
+import tempfile
 import threading
 import time
 import socket
@@ -11,8 +13,14 @@ import socket
 import pytest
 from werkzeug.serving import make_server
 
-from main import app
-from main.models import db, Destination
+# Create the temp DB file BEFORE importing the app so the module-level
+# initialization uses the correct database path.
+_db_fd, _DB_PATH = tempfile.mkstemp(suffix=".db")
+os.close(_db_fd)
+os.environ["QUIZ_DATABASE_URL"] = f"sqlite:///{_DB_PATH}"
+
+from main import app  # noqa: E402
+from main.models import db, Destination  # noqa: E402
 
 
 def _get_free_port():
@@ -25,8 +33,8 @@ def _get_free_port():
 def app_server():
     """Start the Flask app on a random free port and seed test data."""
     port = _get_free_port()
+
     app.config["TESTING"] = True
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
     app.config["SECRET_KEY"] = "test-secret"
 
     with app.app_context():
@@ -43,7 +51,7 @@ def app_server():
             hint4="Home to the Louvre museum.",
             hint5="Located on the Seine river.",
             images=["https://example.com/paris1.jpg", "https://example.com/paris2.jpg"],
-            correct_answers=["paris"],
+            correct_answers=["paris", "paris, france"],
         )
         db.session.add(dest)
         db.session.commit()
@@ -65,6 +73,10 @@ def app_server():
     yield f"http://127.0.0.1:{port}"
 
     server.shutdown()
+    try:
+        os.unlink(_DB_PATH)
+    except OSError:
+        pass
 
 
 @pytest.fixture(scope="session")
