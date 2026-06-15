@@ -5,7 +5,7 @@ import pytest
 
 
 def main():
-    sys.exit(pytest.main(["tests_e2e/", "-v"]))
+    sys.exit(pytest.main(["test_e2e/", "-v"]))
 
 
 if __name__ == "__main__":

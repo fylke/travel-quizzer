@@ -38,4 +38,4 @@ packages = ["src/main", "scripts"]
 profile = "black"
 
 [tool.pytest.ini_options]
-testpaths = ["tests_e2e"]
+testpaths = ["test_e2e"]
