@@ -32,7 +32,14 @@
                         id="password" 
                         placeholder="Enter your password" 
                         maxlength="50"
+                        oninput="updatePasswordStrength()"
                     >
+                    <div id="passwordStrengthContainer" class="password-strength-container hidden">
+                        <div class="password-strength-bar">
+                            <div id="passwordStrengthFill" class="password-strength-fill"></div>
+                        </div>
+                        <span id="passwordStrengthLabel" class="password-strength-label"></span>
+                    </div>
                     <button onclick="handleAuth()" class="btn btn-primary" id="authButton">Log In</button>
                 </div>
 

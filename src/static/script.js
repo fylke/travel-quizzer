@@ -45,6 +45,7 @@ function toggleAuthMode(mode) {
         switchToLogin.classList.remove('hidden');
         authHeading.textContent = 'Create your account';
         authSubtext.textContent = 'Register and start the quiz.';
+        updatePasswordStrength();
     } else {
         nameField.classList.add('hidden');
         authButton.textContent = 'Log In';
@@ -52,7 +53,45 @@ function toggleAuthMode(mode) {
         switchToLogin.classList.add('hidden');
         authHeading.textContent = 'Welcome Back';
         authSubtext.textContent = 'Log in to continue.';
+        document.getElementById('passwordStrengthContainer').classList.add('hidden');
     }
+}
+
+function getPasswordStrength(password) {
+    if (!password) return { level: 0, label: '' };
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+    if (/\d/.test(password)) score++;
+    if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+    if (password.length < 8) return { level: 1, label: 'Too short' };
+    if (score <= 2) return { level: 1, label: 'Weak' };
+    if (score === 3) return { level: 2, label: 'Fair' };
+    if (score === 4) return { level: 3, label: 'Good' };
+    return { level: 4, label: 'Strong' };
+}
+
+function updatePasswordStrength() {
+    const password = document.getElementById('password').value;
+    const container = document.getElementById('passwordStrengthContainer');
+    const fill = document.getElementById('passwordStrengthFill');
+    const label = document.getElementById('passwordStrengthLabel');
+
+    if (!password || authMode !== 'register') {
+        container.classList.add('hidden');
+        return;
+    }
+
+    container.classList.remove('hidden');
+    const strength = getPasswordStrength(password);
+    const classes = ['strength-weak', 'strength-fair', 'strength-good', 'strength-strong'];
+    const strengthClass = classes[strength.level - 1] || '';
+
+    fill.className = 'password-strength-fill ' + strengthClass;
+    label.className = 'password-strength-label ' + strengthClass;
+    label.textContent = strength.label;
 }
 
 async function handleAuth() {
@@ -62,6 +101,11 @@ async function handleAuth() {
     
     if (!email || !password || (authMode === 'register' && !name)) {
         alert('Please fill in all required fields.');
+        return;
+    }
+
+    if (authMode === 'register' && password.length < 8) {
+        alert('Password must be at least 8 characters.');
         return;
     }
 
