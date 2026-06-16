@@ -1,16 +1,12 @@
 import os
-import sys
 import unittest
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-SRC_DIR = os.path.join(ROOT_DIR, 'src')
-if SRC_DIR not in sys.path:
-    sys.path.insert(0, SRC_DIR)
 
 from sqlalchemy.exc import IntegrityError
 
-from main import app
-from main.models import db, Destination, User, QuizResult
+from backend import app
+from backend.models import db, Destination, User, QuizResult
 
 
 class DatabaseModelTestCase(unittest.TestCase):

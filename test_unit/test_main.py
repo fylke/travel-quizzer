@@ -3,12 +3,9 @@ import sys
 import unittest
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-SRC_DIR = os.path.join(ROOT_DIR, 'src')
-if SRC_DIR not in sys.path:
-    sys.path.insert(0, SRC_DIR)
 
-from main import app
-from main.models import db, Destination, User
+from backend import app
+from backend.models import db, Destination, User
 from werkzeug.security import generate_password_hash
 
 # Small fixture used by tests so they don't rely on the removed JSON file
@@ -87,7 +84,7 @@ class MainAppTestCase(unittest.TestCase):
         app.testing = True
         self.client = app.test_client()
         # Use a dedicated test database file to isolate tests from production DB
-        test_db_path = os.path.join(ROOT_DIR, 'data', 'test_quiz_data.db')
+        test_db_path = os.path.join(ROOT_DIR, 'database', 'test_quiz_data.db')
         try:
             if os.path.exists(test_db_path):
                 os.remove(test_db_path)
@@ -132,7 +129,7 @@ class MainAppTestCase(unittest.TestCase):
 
     def tearDown(self):
         # Clean up test database file
-        test_db_path = os.path.join(ROOT_DIR, 'data', 'test_quiz_data.db')
+        test_db_path = os.path.join(ROOT_DIR, 'database', 'test_quiz_data.db')
         with app.app_context():
             db.session.remove()
             db.drop_all()
@@ -377,10 +374,10 @@ class SecretKeyTestCase(unittest.TestCase):
         env.pop('SECRET_KEY', None)
         env.update(env_overrides)
         result = subprocess.run(
-            [sys.executable, '-c', 'from main import app; print("OK")'],
+            [sys.executable, '-c', 'from backend import app; print("OK")'],
             capture_output=True,
             text=True,
-            cwd=SRC_DIR,
+            cwd=ROOT_DIR,
             env=env,
         )
         return result

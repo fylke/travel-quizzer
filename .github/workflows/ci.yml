@@ -20,10 +20,10 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Ensure data directory exists
-        run: mkdir -p data
+      - name: Ensure database directory exists
+        run: mkdir -p database
 
       - name: Run tests
         env:
-          QUIZ_DATABASE_URL: sqlite:///./data/ci_quiz_data.db
+          QUIZ_DATABASE_URL: sqlite:///./database/ci_quiz_data.db
         run: uv run unit-test

@@ -14,14 +14,12 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy application code and static files
-COPY src/ ./src/
-COPY data/ ./data/
-
-# Set Python path so the package can be imported from src
-ENV PYTHONPATH=/app/src
+COPY backend/ ./backend/
+COPY frontend/ ./frontend/
+COPY database/ ./database/
 
 # Expose port 5000
 EXPOSE 5000
 
 # Run Flask app
-CMD ["uv", "run", "python", "-m", "main"]
+CMD ["uv", "run", "python", "-m", "backend"]
