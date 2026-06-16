@@ -210,6 +210,37 @@ class MainAppTestCase(unittest.TestCase):
         self.assertEqual(data['name'], 'New User')
         self.assertEqual(data['email'], 'newuser@example.com')
 
+    def test_register_rejects_invalid_email_format(self):
+        invalid_emails = [
+            'notanemail',
+            '@missing-local.com',
+            'no-domain@',
+            'spaces in@email.com',
+            'no@tld',
+            '',
+        ]
+        for email in invalid_emails:
+            response = self.client.post('/api/register', json={
+                'name': 'Test',
+                'email': email,
+                'password': 'validpass123'
+            })
+            self.assertIn(response.status_code, (400,), msg=f"Expected 400 for '{email}', got {response.status_code}")
+
+    def test_register_accepts_valid_email_format(self):
+        valid_emails = [
+            'user@example.com',
+            'name+tag@sub.domain.org',
+            'dotted.name@company.co.uk',
+        ]
+        for i, email in enumerate(valid_emails):
+            response = self.client.post('/api/register', json={
+                'name': f'User {i}',
+                'email': email,
+                'password': 'validpass123'
+            })
+            self.assertEqual(response.status_code, 200, msg=f"Expected 200 for '{email}', got {response.status_code}")
+
     def test_login_endpoint_allows_registered_user(self):
         response = self.client.post('/api/login', json={
             'email': 'test@example.com',

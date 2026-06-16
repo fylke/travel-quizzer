@@ -14,6 +14,22 @@ function showScreen(screenId) {
     document.getElementById(screenId).classList.remove('hidden');
 }
 
+function showAuthError(message) {
+    const el = document.getElementById('authError');
+    if (el) {
+        el.textContent = message;
+        el.style.display = 'block';
+    }
+}
+
+function clearAuthError() {
+    const el = document.getElementById('authError');
+    if (el) {
+        el.textContent = '';
+        el.style.display = 'none';
+    }
+}
+
 async function loadUser() {
     try {
         const response = await fetch(`${API_BASE}/api/me`);
@@ -98,16 +114,28 @@ async function handleAuth() {
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value.trim();
     const name = document.getElementById('name').value.trim();
-    
+
+    // Mark email as touched so validation styles apply
+    document.getElementById('email').classList.add('touched');
+
     if (!email || !password || (authMode === 'register' && !name)) {
-        alert('Please fill in all required fields.');
+        showAuthError('Please fill in all required fields.');
         return;
     }
 
     if (authMode === 'register' && password.length < 8) {
-        alert('Password must be at least 8 characters.');
+        showAuthError('Password must be at least 8 characters.');
         return;
     }
+
+    // Client-side email format check
+    const emailInput = document.getElementById('email');
+    if (!emailInput.validity.valid) {
+        showAuthError('Please enter a valid email address.');
+        return;
+    }
+
+    clearAuthError();
 
     const payload = { email, password };
     if (authMode === 'register') {
@@ -123,7 +151,7 @@ async function handleAuth() {
 
         const data = await response.json();
         if (!response.ok) {
-            alert(data.error || 'Authentication failed');
+            showAuthError(data.error || 'Authentication failed');
             return;
         }
 
@@ -131,7 +159,7 @@ async function handleAuth() {
         showStatusScreen();
     } catch (error) {
         console.error('Auth error:', error);
-        alert('Unable to authenticate. Please try again.');
+        showAuthError('Unable to authenticate. Please try again.');
     }
 }
 
@@ -365,6 +393,24 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('email')?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             handleAuth();
+        }
+    });
+
+    // Show validation styling after the user interacts with the email field
+    const emailInput = document.getElementById('email');
+    emailInput?.addEventListener('blur', () => {
+        emailInput.classList.add('touched');
+        const hint = document.getElementById('emailHint');
+        if (hint) {
+            hint.style.display = emailInput.validity.valid || !emailInput.value ? 'none' : 'block';
+        }
+    });
+    emailInput?.addEventListener('input', () => {
+        if (emailInput.classList.contains('touched')) {
+            const hint = document.getElementById('emailHint');
+            if (hint) {
+                hint.style.display = emailInput.validity.valid || !emailInput.value ? 'none' : 'block';
+            }
         }
     });
 

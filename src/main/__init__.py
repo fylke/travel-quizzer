@@ -5,8 +5,12 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
 import random
+import re
 from werkzeug.security import check_password_hash, generate_password_hash
 from .models import db, Destination, QuizResult, User
+
+# Basic email format check — intentionally lenient but catches obvious junk
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SRC_ROOT = os.path.dirname(BASE_DIR)
@@ -76,6 +80,9 @@ def register():
 
     if not name or not email or not password:
         return jsonify({"error": "Name, email, and password are required"}), 400
+
+    if not _EMAIL_RE.match(email):
+        return jsonify({"error": "Invalid email format"}), 400
 
     if len(password) < 8:
         return jsonify({"error": "Password must be at least 8 characters"}), 400

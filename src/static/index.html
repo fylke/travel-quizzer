@@ -26,7 +26,10 @@
                         id="email" 
                         placeholder="Enter your email" 
                         maxlength="100"
+                        pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+                        title="Enter a valid email address (e.g. user@example.com)"
                     >
+                    <span class="validation-hint" id="emailHint">Please enter a valid email address</span>
                     <input 
                         type="password" 
                         id="password" 
@@ -41,6 +44,7 @@
                         <span id="passwordStrengthLabel" class="password-strength-label"></span>
                     </div>
                     <button onclick="handleAuth()" class="btn btn-primary" id="authButton">Log In</button>
+                    <p class="auth-error" id="authError" style="display: none;"></p>
                 </div>
 
                 <div class="button-group auth-toggle-group">
