@@ -23,6 +23,11 @@ app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='/static')
 CORS(app)
 app.secret_key = os.environ.get('SECRET_KEY', 'change-me-in-production')
 
+# Secure session cookie configuration
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+
 # Rate limiter (uses in-memory storage by default; set RATELIMIT_STORAGE_URI for Redis)
 limiter = Limiter(
     get_remote_address,

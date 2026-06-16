@@ -267,5 +267,41 @@ class MainAppTestCase(unittest.TestCase):
         self.assertEqual(len(self.quiz_data[0]['hints']), 5)
 
 
+    def test_session_cookie_has_httponly_and_samesite(self):
+        """Issue #4: Session cookie should have HttpOnly and SameSite flags."""
+        # Use a fresh client so the login response contains Set-Cookie
+        client = app.test_client()
+        resp = client.post('/api/login', json={
+            'email': 'test@example.com',
+            'password': 'password123'
+        })
+        self.assertEqual(resp.status_code, 200)
+
+        cookie_header = resp.headers.get('Set-Cookie', '')
+        self.assertIn('HttpOnly', cookie_header)
+        self.assertIn('SameSite=Lax', cookie_header)
+
+    def test_session_cookie_secure_flag_when_enabled(self):
+        """Issue #4: Secure flag should appear when SESSION_COOKIE_SECURE is True."""
+        app.config['SESSION_COOKIE_SECURE'] = True
+        try:
+            client = app.test_client()
+            client.post('/api/register', json={
+                'name': 'SecureTest',
+                'email': 'secure@test.com',
+                'password': 'securepass123'
+            })
+            resp = client.post('/api/login', json={
+                'email': 'secure@test.com',
+                'password': 'securepass123'
+            })
+            self.assertEqual(resp.status_code, 200)
+
+            cookie_header = resp.headers.get('Set-Cookie', '')
+            self.assertIn('Secure', cookie_header)
+        finally:
+            app.config['SESSION_COOKIE_SECURE'] = False
+
+
 if __name__ == '__main__':
     unittest.main()
