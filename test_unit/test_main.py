@@ -333,5 +333,47 @@ class MainAppTestCase(unittest.TestCase):
         self.assertNotEqual(acao, '*')
 
 
+class SecretKeyTestCase(unittest.TestCase):
+    """Issue #1: App must refuse to start without SECRET_KEY in production."""
+
+    def _import_app_in_subprocess(self, env_overrides):
+        """Import the app module in a subprocess with the given env vars."""
+        import subprocess
+        env = os.environ.copy()
+        # Remove SECRET_KEY so the default path is exercised
+        env.pop('SECRET_KEY', None)
+        env.update(env_overrides)
+        result = subprocess.run(
+            [sys.executable, '-c', 'from main import app; print("OK")'],
+            capture_output=True,
+            text=True,
+            cwd=SRC_DIR,
+            env=env,
+        )
+        return result
+
+    def test_production_raises_without_secret_key(self):
+        """In production mode, missing SECRET_KEY should cause a RuntimeError."""
+        result = self._import_app_in_subprocess({'FLASK_ENV': 'production'})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('SECRET_KEY', result.stderr)
+
+    def test_production_starts_with_secret_key_set(self):
+        """In production mode, providing SECRET_KEY should succeed."""
+        result = self._import_app_in_subprocess({
+            'FLASK_ENV': 'production',
+            'SECRET_KEY': 'a-real-secret-key',
+        })
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn('OK', result.stdout)
+
+    def test_development_warns_without_secret_key(self):
+        """In development mode, missing SECRET_KEY should warn but not crash."""
+        result = self._import_app_in_subprocess({'FLASK_ENV': 'development'})
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn('OK', result.stdout)
+        self.assertIn('SECRET_KEY is not set', result.stderr)
+
+
 if __name__ == '__main__':
     unittest.main()

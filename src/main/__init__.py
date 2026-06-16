@@ -24,7 +24,23 @@ app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='/static')
 # Restrict CORS to the app's own origin in production; allow all in dev.
 _cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '*')
 CORS(app, origins=_cors_origins.split(','), supports_credentials=True)
-app.secret_key = os.environ.get('SECRET_KEY', 'change-me-in-production')
+_secret_key = os.environ.get('SECRET_KEY')
+if not _secret_key:
+    import logging as _logging
+
+    _env = os.environ.get('FLASK_ENV', 'development')
+    if _env == 'production':
+        raise RuntimeError(
+            "SECRET_KEY environment variable must be set in production. "
+            "Refusing to start with an insecure default."
+        )
+    _logging.getLogger(__name__).warning(
+        "SECRET_KEY is not set — using an insecure default. "
+        "Do NOT run like this in production."
+    )
+    _secret_key = 'change-me-in-production'
+
+app.secret_key = _secret_key
 
 # Secure session cookie configuration
 app.config['SESSION_COOKIE_HTTPONLY'] = True
