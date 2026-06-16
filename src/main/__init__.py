@@ -1,6 +1,8 @@
 from functools import wraps
 from flask import Flask, jsonify, request, send_from_directory, session
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 import random
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -14,6 +16,20 @@ STATIC_DIR = os.path.join(SRC_ROOT, 'static')
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='/static')
 CORS(app)
 app.secret_key = os.environ.get('SECRET_KEY', 'change-me-in-production')
+
+# Rate limiter (uses in-memory storage by default; set RATELIMIT_STORAGE_URI for Redis)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri=os.environ.get("RATELIMIT_STORAGE_URI", "memory://"),
+)
+
+
+@limiter.request_filter
+def _disable_limiter_in_testing():
+    """Skip rate limiting when app is in testing mode."""
+    return app.testing
 
 # Configure database (allow override via env var)
 default_db_path = os.path.join(PROJECT_ROOT, "data", "quiz_data.db")
@@ -80,6 +96,7 @@ def register():
 
 
 @app.route('/api/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     data = request.json or {}
     email = (data.get('email') or '').strip().lower()
