@@ -251,6 +251,39 @@ class MainAppTestCase(unittest.TestCase):
         self.assertEqual(data['name'], 'Test User')
         self.assertEqual(data['email'], 'test@example.com')
 
+    def test_login_after_registration(self):
+        """Register a new user, clear the session, then log in with those credentials."""
+        # Register
+        reg_resp = self.client.post('/api/register', json={
+            'name': 'Fresh User',
+            'email': 'fresh@example.com',
+            'password': 'freshpass123'
+        })
+        self.assertEqual(reg_resp.status_code, 200)
+        reg_data = reg_resp.get_json()
+        self.assertEqual(reg_data['email'], 'fresh@example.com')
+
+        # Log out (use CSRF token from registration response)
+        csrf_token = reg_data.get('csrfToken', '')
+        logout_resp = self.client.post('/api/logout', headers={
+            'X-CSRF-Token': csrf_token
+        })
+        self.assertEqual(logout_resp.status_code, 200)
+
+        # Confirm session is cleared — /api/me should return 401
+        me_resp = self.client.get('/api/me')
+        self.assertEqual(me_resp.status_code, 401)
+
+        # Log in with the same credentials
+        login_resp = self.client.post('/api/login', json={
+            'email': 'fresh@example.com',
+            'password': 'freshpass123'
+        })
+        self.assertEqual(login_resp.status_code, 200)
+        login_data = login_resp.get_json()
+        self.assertEqual(login_data['name'], 'Fresh User')
+        self.assertEqual(login_data['email'], 'fresh@example.com')
+
     def test_quiz_endpoint_requires_authentication(self):
         client = app.test_client()
         response = client.get('/api/quiz')
