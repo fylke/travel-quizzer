@@ -77,7 +77,7 @@ This plan implements admin CRUD operations for quiz destinations in the Travel Q
     - Return 200 with `{"message": "Destination deleted"}`
     - _Requirements: 6.2, 6.3, 7.1_
 
-- [~] 4. Checkpoint - Verify backend functionality
+- [x] 4. Checkpoint - Verify backend functionality
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 5. Build admin frontend screen
