@@ -43,19 +43,19 @@ This plan implements admin CRUD operations for quiz destinations in the Travel Q
     - Add to `test_unit/test_admin_properties.py`
     - **Validates: Requirements 4.5, 5.6**
 
-- [ ] 3. Implement admin API endpoints
-  - [~] 3.1 Implement GET `/api/admin/destinations` endpoint
+- [x] 3. Implement admin API endpoints
+  - [x] 3.1 Implement GET `/api/admin/destinations` endpoint
     - Register a new route in `backend/__init__.py` (or import from `backend/admin.py`)
     - Protected by `admin_required`, returns all destinations ordered by ID ascending with `count` field
     - Response: `{"destinations": [{"id": N, "name": "..."}], "count": N}`
     - _Requirements: 3.1, 3.2_
 
-  - [~] 3.2 Implement GET `/api/admin/destinations/<id>` endpoint
+  - [x] 3.2 Implement GET `/api/admin/destinations/<id>` endpoint
     - Protected by `admin_required`, returns full destination data (name, hints as array, images, correct_answers)
     - Return 404 if destination not found
     - _Requirements: 5.1_
 
-  - [~] 3.3 Implement POST `/api/admin/destinations` endpoint
+  - [x] 3.3 Implement POST `/api/admin/destinations` endpoint
     - Protected by `admin_required` and `csrf_protected`
     - Validate payload using `validate_destination_payload`, return 400 on failure
     - Check for duplicate name (case-sensitive), return 409 on conflict
@@ -63,14 +63,14 @@ This plan implements admin CRUD operations for quiz destinations in the Travel Q
     - Return 201 with `{"id": new_id}`
     - _Requirements: 4.1, 4.2, 4.3, 4.5, 4.6, 7.1_
 
-  - [~] 3.4 Implement PUT `/api/admin/destinations/<id>` endpoint
+  - [x] 3.4 Implement PUT `/api/admin/destinations/<id>` endpoint
     - Protected by `admin_required` and `csrf_protected`
     - Validate payload, return 400 on failure; return 404 if destination not found
     - Replace all fields with submitted values, normalize answers
     - Return 200 with updated destination data
     - _Requirements: 5.2, 5.3, 5.4, 5.6, 7.1_
 
-  - [~] 3.5 Implement DELETE `/api/admin/destinations/<id>` endpoint
+  - [x] 3.5 Implement DELETE `/api/admin/destinations/<id>` endpoint
     - Protected by `admin_required` and `csrf_protected`
     - Return 404 if destination not found
     - Delete destination and cascade to associated quiz_result rows (handled by SQLAlchemy cascade)
