@@ -227,7 +227,7 @@ class MainAppTestCase(unittest.TestCase):
         data = response.get_json()
         self.assertEqual(data['error'], 'Authentication required')
 
-    def test_quiz_data_is_loaded_from_json(self):
+    def test_quiz_data_is_loaded(self):
         self.assertGreaterEqual(len(self.quiz_data), 5)
         self.assertEqual(self.quiz_data[0]['destination'], 'tokyo')
         self.assertIn('correct_answers', self.quiz_data[0])

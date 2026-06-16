@@ -4,19 +4,17 @@ FROM python:3.11-slim
 # Set working directory in container
 WORKDIR /app
 
-# Install Poetry
-RUN pip install --no-cache-dir poetry
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Copy dependency files
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml uv.lock ./
 
-# Install production dependencies (no dev deps, no virtualenv inside container)
-RUN poetry config virtualenvs.create false && \
-    poetry install --only main --no-interaction --no-ansi --no-root
+# Install production dependencies
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy application code and static files
 COPY src/ ./src/
-COPY src/static/ ./static/
 COPY data/ ./data/
 
 # Set Python path so the package can be imported from src
@@ -26,4 +24,4 @@ ENV PYTHONPATH=/app/src
 EXPOSE 5000
 
 # Run Flask app
-CMD ["python", "-m", "main"]
+CMD ["uv", "run", "python", "-m", "main"]

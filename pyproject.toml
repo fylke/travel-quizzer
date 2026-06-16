@@ -25,6 +25,10 @@ test = [
     "pytest>=8.0,<9.0",
     "pytest-playwright>=0.5,<1.0",
 ]
+dev = [
+    "black>=24.0,<25.0",
+    "isort>=5.13,<6.0",
+]
 
 [build-system]
 requires = ["hatchling"]
