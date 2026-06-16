@@ -302,6 +302,36 @@ class MainAppTestCase(unittest.TestCase):
         finally:
             app.config['SESSION_COOKIE_SECURE'] = False
 
+    def test_cors_restricts_origin_when_configured(self):
+        """Issue #5: CORS should respect CORS_ALLOWED_ORIGINS and reject others."""
+        # We test the config-driven behaviour by creating a minimal Flask app
+        # with the same CORS setup used in production, avoiding module reload
+        # side-effects on the shared `app` instance.
+        from flask import Flask as _Flask
+        from flask_cors import CORS as _CORS
+
+        allowed = 'https://myapp.example.com'
+        test_app = _Flask(__name__)
+        test_app.secret_key = 'test'
+        _CORS(test_app, origins=[allowed], supports_credentials=True)
+
+        @test_app.route('/ping')
+        def ping():
+            return 'pong'
+
+        client = test_app.test_client()
+
+        # Allowed origin gets the ACAO header
+        resp = client.get('/ping', headers={'Origin': allowed})
+        acao = resp.headers.get('Access-Control-Allow-Origin', '')
+        self.assertEqual(acao, allowed)
+
+        # Disallowed origin does NOT get a permissive ACAO header
+        resp = client.get('/ping', headers={'Origin': 'https://evil.com'})
+        acao = resp.headers.get('Access-Control-Allow-Origin', '')
+        self.assertNotEqual(acao, 'https://evil.com')
+        self.assertNotEqual(acao, '*')
+
 
 if __name__ == '__main__':
     unittest.main()

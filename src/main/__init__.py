@@ -20,7 +20,10 @@ PROJECT_ROOT = os.path.dirname(SRC_ROOT)
 STATIC_DIR = os.path.join(SRC_ROOT, 'static')
 
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='/static')
-CORS(app)
+
+# Restrict CORS to the app's own origin in production; allow all in dev.
+_cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '*')
+CORS(app, origins=_cors_origins.split(','), supports_credentials=True)
 app.secret_key = os.environ.get('SECRET_KEY', 'change-me-in-production')
 
 # Secure session cookie configuration
