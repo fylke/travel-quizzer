@@ -1,4 +1,6 @@
 from functools import wraps
+import secrets
+
 from flask import Flask, jsonify, request, send_from_directory, session
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -55,6 +57,32 @@ with app.app_context():
     db.create_all()
 
 
+def _generate_csrf_token():
+    """Generate a new CSRF token and store it in the session."""
+    token = secrets.token_hex(32)
+    session['csrf_token'] = token
+    return token
+
+
+def _check_csrf_token():
+    """Validate the CSRF token from the X-CSRF-Token header against the session."""
+    token = request.headers.get('X-CSRF-Token', '')
+    expected = session.get('csrf_token', '')
+    if not expected or not secrets.compare_digest(token, expected):
+        return False
+    return True
+
+
+def csrf_protected(fn):
+    """Decorator that rejects requests with a missing or invalid CSRF token."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not _check_csrf_token():
+            return jsonify({"error": "Invalid or missing CSRF token"}), 403
+        return fn(*args, **kwargs)
+    return wrapper
+
+
 def get_current_user():
     user_id = session.get('user_id')
     if not user_id:
@@ -99,7 +127,8 @@ def register():
     db.session.commit()
 
     session['user_id'] = user.id
-    return jsonify({"id": user.id, "name": user.name, "email": user.email})
+    csrf_token = _generate_csrf_token()
+    return jsonify({"id": user.id, "name": user.name, "email": user.email, "csrfToken": csrf_token})
 
 
 @app.route('/api/login', methods=['POST'])
@@ -117,10 +146,12 @@ def login():
         return jsonify({"error": "Invalid credentials"}), 401
 
     session['user_id'] = user.id
-    return jsonify({"id": user.id, "name": user.name, "email": user.email})
+    csrf_token = _generate_csrf_token()
+    return jsonify({"id": user.id, "name": user.name, "email": user.email, "csrfToken": csrf_token})
 
 
 @app.route('/api/logout', methods=['POST'])
+@csrf_protected
 def logout():
     session.clear()
     return jsonify({"message": "Logged out"})
@@ -131,7 +162,8 @@ def me():
     user = get_current_user()
     if user is None:
         return jsonify({"error": "Not authenticated"}), 401
-    return jsonify({"id": user.id, "name": user.name, "email": user.email})
+    csrf_token = _generate_csrf_token()
+    return jsonify({"id": user.id, "name": user.name, "email": user.email, "csrfToken": csrf_token})
 
 
 @app.route('/api/status', methods=['GET'])

@@ -3,6 +3,8 @@ let quizState = {
     user: null
 };
 
+let csrfToken = null;
+
 const API_BASE = window.location.origin;
 let authMode = 'login';
 let submitting = false; // guards against double-click on submit
@@ -37,7 +39,9 @@ async function loadUser() {
             showScreen('welcomeScreen');
             return;
         }
-        quizState.user = await response.json();
+        const data = await response.json();
+        quizState.user = data;
+        csrfToken = data.csrfToken || null;
         showStatusScreen();
     } catch (error) {
         console.error('Error checking auth status:', error);
@@ -156,6 +160,7 @@ async function handleAuth() {
         }
 
         quizState.user = data;
+        csrfToken = data.csrfToken || null;
         showStatusScreen();
     } catch (error) {
         console.error('Auth error:', error);
@@ -370,11 +375,16 @@ async function runSpecificQuiz() {
 
 async function handleLogout() {
     try {
-        await fetch(`${API_BASE}/api/logout`, { method: 'POST' });
+        const headers = {};
+        if (csrfToken) {
+            headers['X-CSRF-Token'] = csrfToken;
+        }
+        await fetch(`${API_BASE}/api/logout`, { method: 'POST', headers });
     } catch (error) {
         console.error('Logout error:', error);
     }
     quizState.user = null;
+    csrfToken = null;
     showScreen('welcomeScreen');
 }
 

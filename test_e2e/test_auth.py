@@ -63,7 +63,7 @@ def test_login_after_registration(page: Page, base_url: str):
     expect(page.locator("#statusScreen")).to_be_visible(timeout=5000)
 
     # Log out via API to clear session, then reload
-    page.evaluate("() => fetch('/api/logout', { method: 'POST' })")
+    page.evaluate("() => fetch('/api/logout', { method: 'POST', headers: { 'X-CSRF-Token': window.csrfToken || '' } })")
     page.goto(base_url)
     expect(page.locator("#welcomeScreen")).to_be_visible(timeout=5000)
 
