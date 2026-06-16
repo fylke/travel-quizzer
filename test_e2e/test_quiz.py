@@ -20,6 +20,8 @@ def _register_and_start(page: Page, base_url: str, name: str = "Quizzer"):
     expect(page.locator("#statusScreen")).to_be_visible(timeout=5000)
     page.click("#runRandomQuizBtn")
     expect(page.locator("#quizScreen")).to_be_visible(timeout=5000)
+    # Wait for the quiz data to actually load (hint text appears)
+    expect(page.locator("#hint")).not_to_be_empty(timeout=5000)
 
 
 def test_quiz_screen_shows_hint_and_images(page: Page, base_url: str):
