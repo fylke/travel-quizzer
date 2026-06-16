@@ -1,10 +1,18 @@
 from functools import wraps
+import secrets
+
 from flask import Flask, jsonify, request, send_from_directory, session
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 import random
+import re
 from werkzeug.security import check_password_hash, generate_password_hash
 from .models import db, Destination, QuizResult, User
+
+# Basic email format check — intentionally lenient but catches obvious junk
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SRC_ROOT = os.path.dirname(BASE_DIR)
@@ -12,8 +20,46 @@ PROJECT_ROOT = os.path.dirname(SRC_ROOT)
 STATIC_DIR = os.path.join(SRC_ROOT, 'static')
 
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='/static')
-CORS(app)
-app.secret_key = os.environ.get('SECRET_KEY', 'change-me-in-production')
+
+# Restrict CORS to the app's own origin in production; allow all in dev.
+_cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '*')
+CORS(app, origins=_cors_origins.split(','), supports_credentials=True)
+_secret_key = os.environ.get('SECRET_KEY')
+if not _secret_key:
+    import logging as _logging
+
+    _env = os.environ.get('FLASK_ENV', 'development')
+    if _env == 'production':
+        raise RuntimeError(
+            "SECRET_KEY environment variable must be set in production. "
+            "Refusing to start with an insecure default."
+        )
+    _logging.getLogger(__name__).warning(
+        "SECRET_KEY is not set — using an insecure default. "
+        "Do NOT run like this in production."
+    )
+    _secret_key = 'change-me-in-production'
+
+app.secret_key = _secret_key
+
+# Secure session cookie configuration
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+
+# Rate limiter (uses in-memory storage by default; set RATELIMIT_STORAGE_URI for Redis)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri=os.environ.get("RATELIMIT_STORAGE_URI", "memory://"),
+)
+
+
+@limiter.request_filter
+def _disable_limiter_in_testing():
+    """Skip rate limiting when app is in testing mode."""
+    return app.testing
 
 # Configure database (allow override via env var)
 default_db_path = os.path.join(PROJECT_ROOT, "data", "quiz_data.db")
@@ -35,11 +81,37 @@ with app.app_context():
     db.create_all()
 
 
+def _generate_csrf_token():
+    """Generate a new CSRF token and store it in the session."""
+    token = secrets.token_hex(32)
+    session['csrf_token'] = token
+    return token
+
+
+def _check_csrf_token():
+    """Validate the CSRF token from the X-CSRF-Token header against the session."""
+    token = request.headers.get('X-CSRF-Token', '')
+    expected = session.get('csrf_token', '')
+    if not expected or not secrets.compare_digest(token, expected):
+        return False
+    return True
+
+
+def csrf_protected(fn):
+    """Decorator that rejects requests with a missing or invalid CSRF token."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not _check_csrf_token():
+            return jsonify({"error": "Invalid or missing CSRF token"}), 403
+        return fn(*args, **kwargs)
+    return wrapper
+
+
 def get_current_user():
     user_id = session.get('user_id')
     if not user_id:
         return None
-    return User.query.get(user_id)
+    return db.session.get(User, user_id)
 
 
 def login_required(fn):
@@ -61,6 +133,12 @@ def register():
     if not name or not email or not password:
         return jsonify({"error": "Name, email, and password are required"}), 400
 
+    if not _EMAIL_RE.match(email):
+        return jsonify({"error": "Invalid email format"}), 400
+
+    if len(password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters"}), 400
+
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Email already registered"}), 400
 
@@ -73,10 +151,12 @@ def register():
     db.session.commit()
 
     session['user_id'] = user.id
-    return jsonify({"id": user.id, "name": user.name, "email": user.email})
+    csrf_token = _generate_csrf_token()
+    return jsonify({"id": user.id, "name": user.name, "email": user.email, "csrfToken": csrf_token})
 
 
 @app.route('/api/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     data = request.json or {}
     email = (data.get('email') or '').strip().lower()
@@ -90,10 +170,12 @@ def login():
         return jsonify({"error": "Invalid credentials"}), 401
 
     session['user_id'] = user.id
-    return jsonify({"id": user.id, "name": user.name, "email": user.email})
+    csrf_token = _generate_csrf_token()
+    return jsonify({"id": user.id, "name": user.name, "email": user.email, "csrfToken": csrf_token})
 
 
 @app.route('/api/logout', methods=['POST'])
+@csrf_protected
 def logout():
     session.clear()
     return jsonify({"message": "Logged out"})
@@ -104,7 +186,8 @@ def me():
     user = get_current_user()
     if user is None:
         return jsonify({"error": "Not authenticated"}), 401
-    return jsonify({"id": user.id, "name": user.name, "email": user.email})
+    csrf_token = _generate_csrf_token()
+    return jsonify({"id": user.id, "name": user.name, "email": user.email, "csrfToken": csrf_token})
 
 
 @app.route('/api/status', methods=['GET'])

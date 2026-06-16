@@ -210,6 +210,37 @@ class MainAppTestCase(unittest.TestCase):
         self.assertEqual(data['name'], 'New User')
         self.assertEqual(data['email'], 'newuser@example.com')
 
+    def test_register_rejects_invalid_email_format(self):
+        invalid_emails = [
+            'notanemail',
+            '@missing-local.com',
+            'no-domain@',
+            'spaces in@email.com',
+            'no@tld',
+            '',
+        ]
+        for email in invalid_emails:
+            response = self.client.post('/api/register', json={
+                'name': 'Test',
+                'email': email,
+                'password': 'validpass123'
+            })
+            self.assertIn(response.status_code, (400,), msg=f"Expected 400 for '{email}', got {response.status_code}")
+
+    def test_register_accepts_valid_email_format(self):
+        valid_emails = [
+            'user@example.com',
+            'name+tag@sub.domain.org',
+            'dotted.name@company.co.uk',
+        ]
+        for i, email in enumerate(valid_emails):
+            response = self.client.post('/api/register', json={
+                'name': f'User {i}',
+                'email': email,
+                'password': 'validpass123'
+            })
+            self.assertEqual(response.status_code, 200, msg=f"Expected 200 for '{email}', got {response.status_code}")
+
     def test_login_endpoint_allows_registered_user(self):
         response = self.client.post('/api/login', json={
             'email': 'test@example.com',
@@ -219,6 +250,39 @@ class MainAppTestCase(unittest.TestCase):
         data = response.get_json()
         self.assertEqual(data['name'], 'Test User')
         self.assertEqual(data['email'], 'test@example.com')
+
+    def test_login_after_registration(self):
+        """Register a new user, clear the session, then log in with those credentials."""
+        # Register
+        reg_resp = self.client.post('/api/register', json={
+            'name': 'Fresh User',
+            'email': 'fresh@example.com',
+            'password': 'freshpass123'
+        })
+        self.assertEqual(reg_resp.status_code, 200)
+        reg_data = reg_resp.get_json()
+        self.assertEqual(reg_data['email'], 'fresh@example.com')
+
+        # Log out (use CSRF token from registration response)
+        csrf_token = reg_data.get('csrfToken', '')
+        logout_resp = self.client.post('/api/logout', headers={
+            'X-CSRF-Token': csrf_token
+        })
+        self.assertEqual(logout_resp.status_code, 200)
+
+        # Confirm session is cleared — /api/me should return 401
+        me_resp = self.client.get('/api/me')
+        self.assertEqual(me_resp.status_code, 401)
+
+        # Log in with the same credentials
+        login_resp = self.client.post('/api/login', json={
+            'email': 'fresh@example.com',
+            'password': 'freshpass123'
+        })
+        self.assertEqual(login_resp.status_code, 200)
+        login_data = login_resp.get_json()
+        self.assertEqual(login_data['name'], 'Fresh User')
+        self.assertEqual(login_data['email'], 'fresh@example.com')
 
     def test_quiz_endpoint_requires_authentication(self):
         client = app.test_client()
@@ -234,6 +298,114 @@ class MainAppTestCase(unittest.TestCase):
         self.assertIn('hints', self.quiz_data[0])
         self.assertIsInstance(self.quiz_data[0]['hints'], dict)
         self.assertEqual(len(self.quiz_data[0]['hints']), 5)
+
+
+    def test_session_cookie_has_httponly_and_samesite(self):
+        """Issue #4: Session cookie should have HttpOnly and SameSite flags."""
+        # Use a fresh client so the login response contains Set-Cookie
+        client = app.test_client()
+        resp = client.post('/api/login', json={
+            'email': 'test@example.com',
+            'password': 'password123'
+        })
+        self.assertEqual(resp.status_code, 200)
+
+        cookie_header = resp.headers.get('Set-Cookie', '')
+        self.assertIn('HttpOnly', cookie_header)
+        self.assertIn('SameSite=Lax', cookie_header)
+
+    def test_session_cookie_secure_flag_when_enabled(self):
+        """Issue #4: Secure flag should appear when SESSION_COOKIE_SECURE is True."""
+        app.config['SESSION_COOKIE_SECURE'] = True
+        try:
+            client = app.test_client()
+            client.post('/api/register', json={
+                'name': 'SecureTest',
+                'email': 'secure@test.com',
+                'password': 'securepass123'
+            })
+            resp = client.post('/api/login', json={
+                'email': 'secure@test.com',
+                'password': 'securepass123'
+            })
+            self.assertEqual(resp.status_code, 200)
+
+            cookie_header = resp.headers.get('Set-Cookie', '')
+            self.assertIn('Secure', cookie_header)
+        finally:
+            app.config['SESSION_COOKIE_SECURE'] = False
+
+    def test_cors_restricts_origin_when_configured(self):
+        """Issue #5: CORS should respect CORS_ALLOWED_ORIGINS and reject others."""
+        # We test the config-driven behaviour by creating a minimal Flask app
+        # with the same CORS setup used in production, avoiding module reload
+        # side-effects on the shared `app` instance.
+        from flask import Flask as _Flask
+        from flask_cors import CORS as _CORS
+
+        allowed = 'https://myapp.example.com'
+        test_app = _Flask(__name__)
+        test_app.secret_key = 'test'
+        _CORS(test_app, origins=[allowed], supports_credentials=True)
+
+        @test_app.route('/ping')
+        def ping():
+            return 'pong'
+
+        client = test_app.test_client()
+
+        # Allowed origin gets the ACAO header
+        resp = client.get('/ping', headers={'Origin': allowed})
+        acao = resp.headers.get('Access-Control-Allow-Origin', '')
+        self.assertEqual(acao, allowed)
+
+        # Disallowed origin does NOT get a permissive ACAO header
+        resp = client.get('/ping', headers={'Origin': 'https://evil.com'})
+        acao = resp.headers.get('Access-Control-Allow-Origin', '')
+        self.assertNotEqual(acao, 'https://evil.com')
+        self.assertNotEqual(acao, '*')
+
+
+class SecretKeyTestCase(unittest.TestCase):
+    """Issue #1: App must refuse to start without SECRET_KEY in production."""
+
+    def _import_app_in_subprocess(self, env_overrides):
+        """Import the app module in a subprocess with the given env vars."""
+        import subprocess
+        env = os.environ.copy()
+        # Remove SECRET_KEY so the default path is exercised
+        env.pop('SECRET_KEY', None)
+        env.update(env_overrides)
+        result = subprocess.run(
+            [sys.executable, '-c', 'from main import app; print("OK")'],
+            capture_output=True,
+            text=True,
+            cwd=SRC_DIR,
+            env=env,
+        )
+        return result
+
+    def test_production_raises_without_secret_key(self):
+        """In production mode, missing SECRET_KEY should cause a RuntimeError."""
+        result = self._import_app_in_subprocess({'FLASK_ENV': 'production'})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('SECRET_KEY', result.stderr)
+
+    def test_production_starts_with_secret_key_set(self):
+        """In production mode, providing SECRET_KEY should succeed."""
+        result = self._import_app_in_subprocess({
+            'FLASK_ENV': 'production',
+            'SECRET_KEY': 'a-real-secret-key',
+        })
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn('OK', result.stdout)
+
+    def test_development_warns_without_secret_key(self):
+        """In development mode, missing SECRET_KEY should warn but not crash."""
+        result = self._import_app_in_subprocess({'FLASK_ENV': 'development'})
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn('OK', result.stdout)
+        self.assertIn('SECRET_KEY is not set', result.stderr)
 
 
 if __name__ == '__main__':

@@ -88,6 +88,124 @@ body {
     border-color: #667eea;
 }
 
+/* Email validation visual cue */
+.input-group input[type="email"].touched:invalid {
+    border-color: #f44336;
+    background-color: #fff5f5;
+}
+
+.input-group input[type="email"].touched:valid {
+    border-color: #4caf50;
+}
+
+.validation-hint {
+    width: 100%;
+    font-size: 0.8em;
+    color: #f44336;
+    text-align: left;
+    display: none;
+    padding: 0 4px;
+}
+
+.input-group input[type="email"].touched:invalid ~ .validation-hint {
+    display: block;
+}
+
+/* Password Strength Meter */
+.password-strength-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 4px;
+}
+
+.password-strength-container.hidden {
+    display: none;
+}
+
+.password-strength-bar {
+    flex: 1;
+    height: 6px;
+    background: #eee;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.password-strength-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 3px;
+    transition: width 0.3s, background 0.3s;
+}
+
+.password-strength-fill.strength-weak {
+    width: 25%;
+    background: #f44336;
+}
+
+.password-strength-fill.strength-fair {
+    width: 50%;
+    background: #ff9800;
+}
+
+.password-strength-fill.strength-good {
+    width: 75%;
+    background: #8bc34a;
+}
+
+.password-strength-fill.strength-strong {
+    width: 100%;
+    background: #4caf50;
+}
+
+.password-strength-label {
+    font-size: 0.8em;
+    font-weight: 600;
+    min-width: 50px;
+}
+
+.password-strength-label.strength-weak {
+    color: #f44336;
+}
+
+.password-strength-label.strength-fair {
+    color: #ff9800;
+}
+
+.password-strength-label.strength-good {
+    color: #8bc34a;
+}
+
+.password-strength-label.strength-strong {
+    color: #4caf50;
+}
+
+.input-group.auth-group {
+    flex-direction: column;
+    align-items: center;
+    max-width: 360px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.input-group.auth-group input {
+    width: 100%;
+}
+
+.input-group.auth-group .btn {
+    width: 100%;
+}
+
+.auth-error {
+    width: 100%;
+    color: #f44336;
+    font-size: 0.85em;
+    font-weight: 500;
+    text-align: center;
+    margin-top: 4px;
+}
+
 .loading-message {
     margin-top: 20px;
     color: #666;

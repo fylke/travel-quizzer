@@ -8,12 +8,12 @@ sequenceDiagram
     participant Database
 
     User->>Frontend: Clicks "Login"
-    Frontend->>Backend: POST{userId: "john_doe", password: "hashed_password"}
-    Backend->>Database: Checks credentials
-    Database->>Backend: Returns login result
+    Frontend->>Backend: POST /api/login {email: "user@example.com", password: "plaintext"}
+    Backend->>Database: Lookup user by email, verify password hash
+    Database->>Backend: Returns user record
 
     alt successful case
-        Backend->>Frontend: (200, {session: "token"})
+        Backend->>Frontend: (200, {id, name, email, csrfToken})
     else failure case
         Backend->>Frontend: (401, {error: "Invalid credentials"})
     end
