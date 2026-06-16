@@ -21,8 +21,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --group test
 
-      - name: Ensure data directory exists
-        run: mkdir -p data
+      - name: Ensure database directory exists
+        run: mkdir -p database
 
       - name: Patch Playwright platform detection for Ubuntu
         run: |
@@ -43,5 +43,5 @@ jobs:
 
       - name: Run E2E tests
         env:
-          QUIZ_DATABASE_URL: sqlite:///./data/ci_quiz_data.db
+          QUIZ_DATABASE_URL: sqlite:///./database/ci_quiz_data.db
         run: uv run e2e-test

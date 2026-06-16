@@ -15,5 +15,6 @@ dist/
 
 # OS
 .DS_Store
-data/quiz_data.db
-data/ci_quiz_data.db
+database/quiz_data.db
+database/ci_quiz_data.db
+database/test_quiz_data.db

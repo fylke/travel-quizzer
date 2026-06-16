@@ -15,9 +15,8 @@ from .models import db, Destination, QuizResult, User
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SRC_ROOT = os.path.dirname(BASE_DIR)
-PROJECT_ROOT = os.path.dirname(SRC_ROOT)
-STATIC_DIR = os.path.join(SRC_ROOT, 'static')
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+STATIC_DIR = os.path.join(PROJECT_ROOT, 'frontend')
 
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='/static')
 
@@ -62,7 +61,7 @@ def _disable_limiter_in_testing():
     return app.testing
 
 # Configure database (allow override via env var)
-default_db_path = os.path.join(PROJECT_ROOT, "data", "quiz_data.db")
+default_db_path = os.path.join(PROJECT_ROOT, "database", "quiz_data.db")
 db_url = os.environ.get('QUIZ_DATABASE_URL') or os.environ.get('DATABASE_URL') or f"sqlite:///{default_db_path}"
 
 if db_url.startswith("sqlite:///") and db_url != "sqlite:///:memory:":

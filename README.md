@@ -24,22 +24,22 @@ A fun interactive quiz game where you guess travel destinations based on hints a
 
 ```
 travel-quizzer/
-├── src/
-│   └── main/
-│       ├── __init__.py        # Flask app initialization
-│       └── __main__.py        # Entry point
-├── static/
-│   ├── index.html            # Main HTML page
-│   ├── style.css             # Styling
-│   └── script.js             # Frontend logic
-├── data/
-│   └── quiz_data.json        # Quiz questions and data
-├── test/
-│   └── test_main.py          # Test suite
-├── pyproject.toml            # Poetry configuration
-├── Containerfile             # Container build configuration
-├── podman-compose.yml        # Podman Compose orchestration
-└── README.md                 # This file
+├── backend/
+│   ├── __init__.py        # Flask app initialization
+│   ├── __main__.py        # Entry point
+│   └── models.py          # SQLAlchemy models
+├── frontend/
+│   ├── index.html         # Main HTML page
+│   ├── style.css          # Styling
+│   └── script.js          # Frontend logic
+├── database/
+│   └── quiz_data.db       # SQLite database
+├── test_unit/             # Unit tests
+├── test_e2e/              # End-to-end Playwright tests
+├── pyproject.toml         # Project configuration
+├── Containerfile          # Container build configuration
+├── podman-compose.yml     # Podman Compose orchestration
+└── README.md              # This file
 ```
 
 ## Setup Instructions
@@ -100,7 +100,7 @@ uv run e2e-test
 
 1. **Start the Flask server:**
    ```bash
-   uv run python -m main
+   uv run python -m backend
    ```
 
    You should see output like:
@@ -313,7 +313,7 @@ Edit `data/quiz_data.json` to add more travel destinations:
 ```
 
 ### Adjust Scoring Formula
-Modify the scoring calculation in `src/main/__init__.py`:
+Modify the scoring calculation in `backend/__init__.py`:
 ```python
 if is_correct:
     points = hint_difficulty * remaining_guesses  # Customize this formula

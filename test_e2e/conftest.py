@@ -19,8 +19,8 @@ _db_fd, _DB_PATH = tempfile.mkstemp(suffix=".db")
 os.close(_db_fd)
 os.environ["QUIZ_DATABASE_URL"] = f"sqlite:///{_DB_PATH}"
 
-from main import app  # noqa: E402
-from main.models import db, Destination  # noqa: E402
+from backend import app  # noqa: E402
+from backend.models import db, Destination  # noqa: E402
 
 
 def _get_free_port():
@@ -89,7 +89,7 @@ def base_url(app_server):
 def clean_db(app_server):
     """Reset user data between tests while keeping destinations."""
     with app.app_context():
-        from main.models import User, QuizResult
+        from backend.models import User, QuizResult
 
         QuizResult.query.delete()
         User.query.delete()
