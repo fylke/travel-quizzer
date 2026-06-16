@@ -122,6 +122,18 @@ def login_required(fn):
     return wrapper
 
 
+def admin_required(fn):
+    """Decorator that requires the user to be authenticated AND an admin."""
+    @wraps(fn)
+    @login_required
+    def wrapper(*args, **kwargs):
+        user = get_current_user()
+        if not user.is_admin:
+            return jsonify({"error": "Admin access required"}), 403
+        return fn(*args, **kwargs)
+    return wrapper
+
+
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.json or {}
@@ -151,7 +163,7 @@ def register():
 
     session['user_id'] = user.id
     csrf_token = _generate_csrf_token()
-    return jsonify({"id": user.id, "name": user.name, "email": user.email, "csrfToken": csrf_token})
+    return jsonify({"id": user.id, "name": user.name, "email": user.email, "isAdmin": user.is_admin, "csrfToken": csrf_token})
 
 
 @app.route('/api/login', methods=['POST'])
@@ -170,7 +182,7 @@ def login():
 
     session['user_id'] = user.id
     csrf_token = _generate_csrf_token()
-    return jsonify({"id": user.id, "name": user.name, "email": user.email, "csrfToken": csrf_token})
+    return jsonify({"id": user.id, "name": user.name, "email": user.email, "isAdmin": user.is_admin, "csrfToken": csrf_token})
 
 
 @app.route('/api/logout', methods=['POST'])
@@ -186,7 +198,7 @@ def me():
     if user is None:
         return jsonify({"error": "Not authenticated"}), 401
     csrf_token = _generate_csrf_token()
-    return jsonify({"id": user.id, "name": user.name, "email": user.email, "csrfToken": csrf_token})
+    return jsonify({"id": user.id, "name": user.name, "email": user.email, "isAdmin": user.is_admin, "csrfToken": csrf_token})
 
 
 @app.route('/api/status', methods=['GET'])
