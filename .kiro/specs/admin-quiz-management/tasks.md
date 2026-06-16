@@ -106,7 +106,7 @@ This plan implements admin CRUD operations for quiz destinations in the Travel Q
     - Follow existing design patterns in `style.css`
     - _Requirements: 2.3_
 
-- [~] 6. Checkpoint - Verify full stack integration
+- [x] 6. Checkpoint - Verify full stack integration
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 7. Write unit tests for admin API

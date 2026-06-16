@@ -12,6 +12,12 @@ from werkzeug.security import generate_password_hash
 class AdminAuthTestCase(unittest.TestCase):
     """Tests for the admin authorization system (is_admin field, admin_required decorator, isAdmin in responses)."""
 
+    # The admin_required decorator is tested against the real
+    # GET /api/admin/destinations endpoint rather than a test-only route,
+    # which avoids Flask's "setup already finished" error when tests run
+    # after other modules have already made requests.
+    ADMIN_ENDPOINT = '/api/admin/destinations'
+
     def setUp(self):
         app.testing = True
         self.client = app.test_client()
@@ -46,14 +52,6 @@ class AdminAuthTestCase(unittest.TestCase):
             )
             db.session.add(self.admin_user)
             db.session.commit()
-
-        # Register a test-only route that uses admin_required
-        # Use a unique endpoint name to avoid conflicts
-        if '/api/test-admin-only' not in [rule.rule for rule in app.url_map.iter_rules()]:
-            @app.route('/api/test-admin-only', methods=['GET'])
-            @admin_required
-            def test_admin_only_endpoint():
-                return jsonify({"message": "Admin access granted"})
 
     def tearDown(self):
         test_db_path = os.path.join(ROOT_DIR, 'database', 'test_admin_auth.db')
@@ -151,7 +149,7 @@ class AdminAuthTestCase(unittest.TestCase):
     def test_admin_required_returns_401_for_unauthenticated_request(self):
         """admin_required should return 401 when no user is authenticated."""
         client = app.test_client()  # fresh client, no session
-        response = client.get('/api/test-admin-only')
+        response = client.get(self.ADMIN_ENDPOINT)
         self.assertEqual(response.status_code, 401)
         data = response.get_json()
         self.assertEqual(data['error'], 'Authentication required')
@@ -162,7 +160,7 @@ class AdminAuthTestCase(unittest.TestCase):
             'email': 'regular@example.com',
             'password': 'password123'
         })
-        response = self.client.get('/api/test-admin-only')
+        response = self.client.get(self.ADMIN_ENDPOINT)
         self.assertEqual(response.status_code, 403)
         data = response.get_json()
         self.assertEqual(data['error'], 'Admin access required')
@@ -173,10 +171,8 @@ class AdminAuthTestCase(unittest.TestCase):
             'email': 'admin@example.com',
             'password': 'adminpass123'
         })
-        response = self.client.get('/api/test-admin-only')
+        response = self.client.get(self.ADMIN_ENDPOINT)
         self.assertEqual(response.status_code, 200)
-        data = response.get_json()
-        self.assertEqual(data['message'], 'Admin access granted')
 
 
 if __name__ == '__main__':
