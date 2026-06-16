@@ -80,18 +80,18 @@ This plan implements admin CRUD operations for quiz destinations in the Travel Q
 - [x] 4. Checkpoint - Verify backend functionality
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Build admin frontend screen
-  - [~] 5.1 Add admin screen HTML to `frontend/index.html`
+- [x] 5. Build admin frontend screen
+  - [x] 5.1 Add admin screen HTML to `frontend/index.html`
     - Add `<div id="adminScreen" class="screen hidden">` with header, destination count, destinations list container, "Add New Destination" button, empty-state message, and error display area
     - Add destination form section with name input, five hint textareas, dynamic image URL list, dynamic correct answers list, Save and Cancel buttons
     - Add confirmation dialog markup for delete
     - _Requirements: 2.1, 2.3, 2.4, 3.1, 3.2, 3.3_
 
-  - [~] 5.2 Add admin navigation link to status screen
+  - [x] 5.2 Add admin navigation link to status screen
     - Add an "Admin" link/button inside `statusScreen` that is conditionally shown when `quizState.user.isAdmin` is true
     - _Requirements: 2.1, 2.2, 2.5_
 
-  - [~] 5.3 Implement admin JavaScript logic in `frontend/script.js`
+  - [x] 5.3 Implement admin JavaScript logic in `frontend/script.js`
     - Add functions: `showAdminScreen()`, `loadDestinations()`, `showDestinationForm(id?)`, `saveDestination()`, `deleteDestination(id)`, `hideAdminScreen()`
     - `loadDestinations()`: fetches GET `/api/admin/destinations`, renders list, shows empty state if count is 0, handles errors
     - `showDestinationForm(id)`: if id provided, fetches GET `/api/admin/destinations/<id>` to populate form; otherwise shows blank form
@@ -101,7 +101,7 @@ This plan implements admin CRUD operations for quiz destinations in the Travel Q
     - Update `loadUser()` to capture `isAdmin` from `/api/me` response
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.3, 3.4, 4.1, 4.4, 5.1, 5.2, 5.5, 6.1, 6.4, 6.5, 6.6, 7.2_
 
-  - [~] 5.4 Add admin screen styles to `frontend/style.css`
+  - [x] 5.4 Add admin screen styles to `frontend/style.css`
     - Style the admin screen layout, destinations table/list, form elements, error/success messages, and confirmation dialog
     - Follow existing design patterns in `style.css`
     - _Requirements: 2.3_
