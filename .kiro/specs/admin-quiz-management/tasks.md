@@ -21,13 +21,13 @@ This plan implements admin CRUD operations for quiz destinations in the Travel Q
     - Return 403 with `{"error": "Admin access required"}` if user is not admin
     - _Requirements: 1.2, 1.3, 1.4_
 
-- [ ] 2. Implement validation and normalization functions
-  - [~] 2.1 Create `backend/admin.py` with `validate_destination_payload` function
+- [x] 2. Implement validation and normalization functions
+  - [x] 2.1 Create `backend/admin.py` with `validate_destination_payload` function
     - Pure function taking a dict and returning `(is_valid: bool, errors: list[str])`
     - Validate: name 1–128 non-blank chars, exactly 5 hints each 1–256 non-blank chars, 2–10 image URLs each starting with `http://` or `https://`, 1–20 correct answers each 1–128 chars
     - _Requirements: 4.2, 4.3, 5.4, 8.1, 8.2, 8.3_
 
-  - [~] 2.2 Create `normalize_answers` function in `backend/admin.py`
+  - [x] 2.2 Create `normalize_answers` function in `backend/admin.py`
     - Pure function that lowercases and strips whitespace from each answer string
     - _Requirements: 4.5, 5.6_
 
