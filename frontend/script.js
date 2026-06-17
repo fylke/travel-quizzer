@@ -16,6 +16,25 @@ function showScreen(screenId) {
     document.getElementById(screenId).classList.remove('hidden');
 }
 
+function showNotification(message, type = 'error') {
+    // Remove any existing notification
+    const existing = document.getElementById('appNotification');
+    if (existing) existing.remove();
+
+    const el = document.createElement('div');
+    el.id = 'appNotification';
+    el.className = `app-notification app-notification-${type}`;
+    el.setAttribute('role', 'alert');
+    el.textContent = message;
+    document.body.appendChild(el);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        el.classList.add('app-notification-fade');
+        el.addEventListener('transitionend', () => el.remove());
+    }, 5000);
+}
+
 function showAuthError(message) {
     const el = document.getElementById('authError');
     if (el) {
@@ -184,7 +203,7 @@ async function loadQuestion() {
         const response = await fetch(`${API_BASE}/api/quiz`);
         if (!response.ok) {
             const error = await response.json();
-            alert(error.error || 'Unable to load quiz.');
+            showNotification(error.error || 'Unable to load quiz.');
             return;
         }
 
@@ -192,7 +211,7 @@ async function loadQuestion() {
         displayQuiz(data);
     } catch (error) {
         console.error('Error loading quiz:', error);
-        alert('Failed to load quiz. Please refresh the page.');
+        showNotification('Failed to load quiz. Please refresh the page.');
     }
 }
 
@@ -210,7 +229,8 @@ async function submitAnswer() {
     const answerInput = document.getElementById('answerInput');
     const userAnswer = answerInput.value.trim();
     if (!userAnswer) {
-        alert('Please enter an answer');
+        animateWrongGuess(answerInput);
+        answerInput.focus();
         return;
     }
 
@@ -224,7 +244,7 @@ async function submitAnswer() {
 
         const result = await response.json();
         if (!response.ok) {
-            alert(result.error || 'Error checking answer');
+            showNotification(result.error || 'Error checking answer');
             submitting = false;
             return;
         }
@@ -233,6 +253,7 @@ async function submitAnswer() {
             showFeedback(true, result.points, result.answer);
         } else if (result.remainingGuesses !== undefined && result.remainingGuesses > 0) {
             // Wrong but still has guesses — backend returned next hint
+            animateWrongGuess(answerInput);
             updateHintDisplay(result.hint, result.hintDifficulty, result.remainingGuesses);
             document.getElementById('answerInput').value = '';
             document.getElementById('answerInput').focus();
@@ -243,7 +264,7 @@ async function submitAnswer() {
         }
     } catch (error) {
         console.error('Error checking answer:', error);
-        alert('Error checking answer');
+        showNotification('Error checking answer');
         submitting = false;
     }
 }
@@ -368,14 +389,14 @@ async function runRandomQuiz() {
 async function runSpecificQuiz() {
     const quizId = document.getElementById('specificQuizId').value.trim();
     if (!quizId) {
-        alert('Please enter a quiz ID.');
+        showNotification('Please enter a quiz ID.');
         return;
     }
     try {
         const response = await fetch(`${API_BASE}/api/quiz/${quizId}`);
         if (!response.ok) {
             const err = await response.json();
-            alert(err.error || 'Quiz not found.');
+            showNotification(err.error || 'Quiz not found.');
             return;
         }
         const data = await response.json();
@@ -383,7 +404,7 @@ async function runSpecificQuiz() {
         displayQuiz(data);
     } catch (error) {
         console.error('Error starting specific quiz:', error);
-        alert('Failed to load quiz.');
+        showNotification('Failed to load quiz.');
     }
 }
 
@@ -690,6 +711,75 @@ function escapeAttr(str) {
 }
 
 // ==================== End Admin Panel ====================
+
+// ==================== Wrong Guess Animation ====================
+
+/**
+ * Applies wrong-guess animation to the given input element.
+ * - If prefers-reduced-motion is active: applies static red border for 1s.
+ * - Otherwise: applies shake + glow CSS animations (600ms).
+ * - Handles re-triggering if animation is already active.
+ * - Cleans up all animation classes/styles on completion.
+ *
+ * @param {HTMLInputElement} inputElement - The input to animate
+ */
+function animateWrongGuess(inputElement) {
+    if (!inputElement) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion) {
+        // Static fallback: apply red border class for 1 second
+        inputElement.classList.remove('wrong-guess-static');
+        inputElement.classList.add('wrong-guess-static');
+        setTimeout(() => {
+            inputElement.classList.remove('wrong-guess-static');
+            // Ensure no residual inline styles
+            inputElement.style.removeProperty('transform');
+            inputElement.style.removeProperty('box-shadow');
+            inputElement.style.removeProperty('border-color');
+        }, 1000);
+        return;
+    }
+
+    // Remove existing animation classes to allow re-trigger
+    inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow');
+
+    // Force reflow so re-adding classes restarts the animation
+    void inputElement.offsetWidth;
+
+    // Apply animation classes
+    inputElement.classList.add('wrong-guess-shake', 'wrong-guess-glow');
+
+    // Cleanup function to remove classes and residual inline styles
+    function cleanup() {
+        inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow');
+        inputElement.style.removeProperty('transform');
+        inputElement.style.removeProperty('box-shadow');
+        inputElement.style.removeProperty('border-color');
+    }
+
+    // Listen for animationend to remove classes (once)
+    let cleaned = false;
+    function onAnimationEnd() {
+        if (cleaned) return;
+        cleaned = true;
+        cleanup();
+    }
+
+    inputElement.addEventListener('animationend', onAnimationEnd, { once: true });
+
+    // Defensive fallback: remove classes after 1000ms if animationend never fires
+    setTimeout(() => {
+        if (!cleaned) {
+            cleaned = true;
+            inputElement.removeEventListener('animationend', onAnimationEnd);
+            cleanup();
+        }
+    }, 1000);
+}
+
+// ==================== End Wrong Guess Animation ====================
 
 // Allow Enter key to submit answer
 document.addEventListener('DOMContentLoaded', () => {

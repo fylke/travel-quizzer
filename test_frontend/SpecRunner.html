@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Jasmine Spec Runner - Admin Panel</title>
+    <title>Jasmine Spec Runner</title>
     <!-- Jasmine 5.x CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/jasmine.min.css">
     <!-- Jasmine 5.x Core -->
@@ -10,6 +10,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/jasmine-html.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/boot0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/boot1.min.js"></script>
+    <!-- fast-check for property-based testing (IIFE bundle, exposes global `fc`) -->
+    <script src="fast-check.iife.js"></script>
 </head>
 <body>
     <!-- Minimal DOM fixtures needed by script.js DOMContentLoaded listener -->
@@ -31,5 +33,7 @@
     <!-- Spec files -->
     <script src="spec/adminSpec.js"></script>
     <script src="spec/statsSpec.js"></script>
+    <script src="spec/wrongGuessAnimationSpec.js"></script>
+    <script src="spec/wrongGuessAnimationPropertySpec.js"></script>
 </body>
 </html>

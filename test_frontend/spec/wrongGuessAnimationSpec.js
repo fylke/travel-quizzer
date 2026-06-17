@@ -1,0 +1,235 @@
+describe('Wrong Guess Animation', function () {
+    var inputElement;
+
+    beforeEach(function () {
+        inputElement = document.getElementById('answerInput');
+        // Clean up any leftover classes/styles from previous tests
+        inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
+        inputElement.style.removeProperty('transform');
+        inputElement.style.removeProperty('box-shadow');
+        inputElement.style.removeProperty('border-color');
+        inputElement.value = '';
+        inputElement.disabled = false;
+    });
+
+    // ========== animateWrongGuess adds animation classes ==========
+    describe('animateWrongGuess applies animation classes', function () {
+        beforeEach(function () {
+            spyOn(window, 'matchMedia').and.returnValue({ matches: false });
+        });
+
+        it('adds .wrong-guess-shake class to the element', function () {
+            animateWrongGuess(inputElement);
+            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(true);
+        });
+
+        it('adds .wrong-guess-glow class to the element', function () {
+            animateWrongGuess(inputElement);
+            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(true);
+        });
+    });
+
+    // ========== animationend removes animation classes ==========
+    describe('animationend event cleanup', function () {
+        beforeEach(function () {
+            spyOn(window, 'matchMedia').and.returnValue({ matches: false });
+        });
+
+        it('removes .wrong-guess-shake after animationend fires', function () {
+            animateWrongGuess(inputElement);
+            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(true);
+
+            var event = new Event('animationend');
+            inputElement.dispatchEvent(event);
+
+            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(false);
+        });
+
+        it('removes .wrong-guess-glow after animationend fires', function () {
+            animateWrongGuess(inputElement);
+            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(true);
+
+            var event = new Event('animationend');
+            inputElement.dispatchEvent(event);
+
+            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(false);
+        });
+    });
+
+    // ========== prefers-reduced-motion applies static class ==========
+    describe('prefers-reduced-motion support', function () {
+        beforeEach(function () {
+            jasmine.clock().install();
+            spyOn(window, 'matchMedia').and.returnValue({ matches: true });
+        });
+
+        afterEach(function () {
+            jasmine.clock().uninstall();
+        });
+
+        it('applies .wrong-guess-static when reduced motion is preferred', function () {
+            animateWrongGuess(inputElement);
+            expect(inputElement.classList.contains('wrong-guess-static')).toBe(true);
+        });
+
+        it('does not apply .wrong-guess-shake when reduced motion is preferred', function () {
+            animateWrongGuess(inputElement);
+            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(false);
+        });
+
+        it('does not apply .wrong-guess-glow when reduced motion is preferred', function () {
+            animateWrongGuess(inputElement);
+            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(false);
+        });
+
+        it('removes .wrong-guess-static after 1000ms timeout', function () {
+            animateWrongGuess(inputElement);
+            expect(inputElement.classList.contains('wrong-guess-static')).toBe(true);
+
+            jasmine.clock().tick(1001);
+            expect(inputElement.classList.contains('wrong-guess-static')).toBe(false);
+        });
+    });
+
+    // ========== Re-triggering mid-animation restarts ==========
+    describe('re-triggering mid-animation', function () {
+        beforeEach(function () {
+            spyOn(window, 'matchMedia').and.returnValue({ matches: false });
+        });
+
+        it('re-applies animation classes when triggered again mid-animation', function () {
+            animateWrongGuess(inputElement);
+            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(true);
+            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(true);
+
+            // Trigger again without animationend firing
+            animateWrongGuess(inputElement);
+            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(true);
+            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(true);
+        });
+    });
+
+    // ========== Empty/whitespace submission calls animateWrongGuess ==========
+    describe('empty/whitespace submission', function () {
+        beforeEach(function () {
+            jasmine.clock().install();
+            spyOn(window, 'matchMedia').and.returnValue({ matches: false });
+            spyOn(window, 'alert');
+        });
+
+        afterEach(function () {
+            jasmine.clock().uninstall();
+            submitting = false;
+        });
+
+        it('triggers animation on empty input submission', function () {
+            inputElement.value = '';
+            submitAnswer();
+            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(true);
+            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(true);
+        });
+
+        it('triggers animation on whitespace-only input submission', function () {
+            inputElement.value = '   ';
+            submitAnswer();
+            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(true);
+            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(true);
+        });
+
+        it('does not call alert() on empty submission', function () {
+            inputElement.value = '';
+            submitAnswer();
+            expect(window.alert).not.toHaveBeenCalled();
+        });
+    });
+
+    // ========== Input remains enabled and focusable during animation ==========
+    describe('input state during animation', function () {
+        beforeEach(function () {
+            spyOn(window, 'matchMedia').and.returnValue({ matches: false });
+        });
+
+        it('input is not disabled during animation', function () {
+            animateWrongGuess(inputElement);
+            expect(inputElement.disabled).toBe(false);
+        });
+
+        it('input is focusable during animation', function () {
+            animateWrongGuess(inputElement);
+            inputElement.focus();
+            expect(document.activeElement).toBe(inputElement);
+        });
+    });
+
+    // ========== alert() is never called in wrong-guess or empty-submission paths ==========
+    describe('alert() is never called', function () {
+        beforeEach(function () {
+            jasmine.clock().install();
+            spyOn(window, 'matchMedia').and.returnValue({ matches: false });
+            spyOn(window, 'alert');
+        });
+
+        afterEach(function () {
+            jasmine.clock().uninstall();
+            submitting = false;
+        });
+
+        it('does not call alert() when empty input is submitted', function () {
+            inputElement.value = '';
+            submitAnswer();
+            expect(window.alert).not.toHaveBeenCalled();
+        });
+
+        it('does not call alert() when whitespace input is submitted', function () {
+            inputElement.value = '    \t  ';
+            submitAnswer();
+            expect(window.alert).not.toHaveBeenCalled();
+        });
+
+        it('does not call alert() when animateWrongGuess is called directly', function () {
+            animateWrongGuess(inputElement);
+            expect(window.alert).not.toHaveBeenCalled();
+        });
+    });
+
+    // ========== Focus style preserved after animation ends ==========
+    describe('focus style preservation after animation', function () {
+        beforeEach(function () {
+            spyOn(window, 'matchMedia').and.returnValue({ matches: false });
+        });
+
+        it('removes all animation inline styles after animationend', function () {
+            animateWrongGuess(inputElement);
+
+            var event = new Event('animationend');
+            inputElement.dispatchEvent(event);
+
+            // No residual inline styles from animation
+            expect(inputElement.style.getPropertyValue('transform')).toBe('');
+            expect(inputElement.style.getPropertyValue('box-shadow')).toBe('');
+            expect(inputElement.style.getPropertyValue('border-color')).toBe('');
+        });
+
+        it('input remains focusable after animation ends', function () {
+            inputElement.focus();
+            animateWrongGuess(inputElement);
+
+            var event = new Event('animationend');
+            inputElement.dispatchEvent(event);
+
+            // Input should still be focused
+            expect(document.activeElement).toBe(inputElement);
+        });
+
+        it('no animation classes remain after animationend', function () {
+            inputElement.focus();
+            animateWrongGuess(inputElement);
+
+            var event = new Event('animationend');
+            inputElement.dispatchEvent(event);
+
+            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(false);
+            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(false);
+        });
+    });
+});
