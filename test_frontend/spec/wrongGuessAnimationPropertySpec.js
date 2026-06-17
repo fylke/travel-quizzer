@@ -5,13 +5,15 @@ describe('Wrong Guess Animation - Property Tests', function () {
         // **Validates: Requirements 3.4**
 
         var inputElement;
+        var quizScreen;
 
         beforeEach(function () {
             inputElement = document.getElementById('answerInput');
-            inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
-            inputElement.style.removeProperty('transform');
-            inputElement.style.removeProperty('box-shadow');
-            inputElement.style.removeProperty('border-color');
+            quizScreen = document.getElementById('quizScreen');
+            quizScreen.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
+            quizScreen.style.removeProperty('transform');
+            quizScreen.style.removeProperty('box-shadow');
+            quizScreen.style.removeProperty('border-color');
             inputElement.value = '';
             inputElement.disabled = false;
             submitting = false;
@@ -34,7 +36,7 @@ describe('Wrong Guess Animation - Property Tests', function () {
                     }),
                     function (whitespaceStr) {
                         // Reset state before each iteration
-                        inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
+                        quizScreen.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
                         inputElement.value = whitespaceStr;
                         submitting = false;
                         window.fetch.calls.reset();
@@ -42,9 +44,9 @@ describe('Wrong Guess Animation - Property Tests', function () {
                         // Act
                         submitAnswer();
 
-                        // Assert: animation classes are applied
-                        expect(inputElement.classList.contains('wrong-guess-shake')).toBe(true);
-                        expect(inputElement.classList.contains('wrong-guess-glow')).toBe(true);
+                        // Assert: animation classes are applied to quiz screen
+                        expect(quizScreen.classList.contains('wrong-guess-shake')).toBe(true);
+                        expect(quizScreen.classList.contains('wrong-guess-glow')).toBe(true);
 
                         // Assert: fetch was NOT called (no API request made)
                         expect(window.fetch).not.toHaveBeenCalled();
@@ -60,22 +62,24 @@ describe('Wrong Guess Animation - Property Tests', function () {
         // **Validates: Requirements 4.3, 6.4**
 
         var inputElement;
+        var quizScreen;
 
         beforeEach(function () {
             inputElement = document.getElementById('answerInput');
-            inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
-            inputElement.style.removeProperty('transform');
-            inputElement.style.removeProperty('box-shadow');
-            inputElement.style.removeProperty('border-color');
+            quizScreen = document.getElementById('quizScreen');
+            quizScreen.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
+            quizScreen.style.removeProperty('transform');
+            quizScreen.style.removeProperty('box-shadow');
+            quizScreen.style.removeProperty('border-color');
             inputElement.value = '';
             inputElement.disabled = false;
         });
 
         afterEach(function () {
-            inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
-            inputElement.style.removeProperty('transform');
-            inputElement.style.removeProperty('box-shadow');
-            inputElement.style.removeProperty('border-color');
+            quizScreen.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
+            quizScreen.style.removeProperty('transform');
+            quizScreen.style.removeProperty('box-shadow');
+            quizScreen.style.removeProperty('border-color');
         });
 
         it('preserves input value and leaves no residual styling after animation completes for any string', function () {
@@ -86,10 +90,10 @@ describe('Wrong Guess Animation - Property Tests', function () {
                     fc.string(),
                     function (v) {
                         // Reset state before each iteration
-                        inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow');
-                        inputElement.style.removeProperty('transform');
-                        inputElement.style.removeProperty('box-shadow');
-                        inputElement.style.removeProperty('border-color');
+                        quizScreen.classList.remove('wrong-guess-shake', 'wrong-guess-glow');
+                        quizScreen.style.removeProperty('transform');
+                        quizScreen.style.removeProperty('box-shadow');
+                        quizScreen.style.removeProperty('border-color');
                         inputElement.disabled = false;
 
                         // Set arbitrary input value
@@ -98,9 +102,9 @@ describe('Wrong Guess Animation - Property Tests', function () {
                         // Trigger animation
                         animateWrongGuess(inputElement);
 
-                        // Fire animationend event to trigger cleanup
+                        // Fire animationend event on the quiz screen to trigger cleanup
                         var event = new Event('animationend');
-                        inputElement.dispatchEvent(event);
+                        quizScreen.dispatchEvent(event);
 
                         // Assert: value is preserved
                         expect(inputElement.value).toBe(v);
@@ -108,14 +112,14 @@ describe('Wrong Guess Animation - Property Tests', function () {
                         // Assert: input is not disabled
                         expect(inputElement.disabled).toBe(false);
 
-                        // Assert: no residual inline styles
-                        expect(inputElement.style.getPropertyValue('transform')).toBe('');
-                        expect(inputElement.style.getPropertyValue('box-shadow')).toBe('');
-                        expect(inputElement.style.getPropertyValue('border-color')).toBe('');
+                        // Assert: no residual inline styles on quiz screen
+                        expect(quizScreen.style.getPropertyValue('transform')).toBe('');
+                        expect(quizScreen.style.getPropertyValue('box-shadow')).toBe('');
+                        expect(quizScreen.style.getPropertyValue('border-color')).toBe('');
 
                         // Assert: no animation classes remain
-                        expect(inputElement.classList.contains('wrong-guess-shake')).toBe(false);
-                        expect(inputElement.classList.contains('wrong-guess-glow')).toBe(false);
+                        expect(quizScreen.classList.contains('wrong-guess-shake')).toBe(false);
+                        expect(quizScreen.classList.contains('wrong-guess-glow')).toBe(false);
                     }
                 ),
                 { numRuns: 100 }
@@ -128,22 +132,24 @@ describe('Wrong Guess Animation - Property Tests', function () {
         // **Validates: Requirements 4.2, 2.5**
 
         var inputElement;
+        var quizScreen;
 
         beforeEach(function () {
             inputElement = document.getElementById('answerInput');
-            inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
-            inputElement.style.removeProperty('transform');
-            inputElement.style.removeProperty('box-shadow');
-            inputElement.style.removeProperty('border-color');
+            quizScreen = document.getElementById('quizScreen');
+            quizScreen.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
+            quizScreen.style.removeProperty('transform');
+            quizScreen.style.removeProperty('box-shadow');
+            quizScreen.style.removeProperty('border-color');
             inputElement.value = '';
             inputElement.disabled = false;
         });
 
         afterEach(function () {
-            inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
-            inputElement.style.removeProperty('transform');
-            inputElement.style.removeProperty('box-shadow');
-            inputElement.style.removeProperty('border-color');
+            quizScreen.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
+            quizScreen.style.removeProperty('transform');
+            quizScreen.style.removeProperty('box-shadow');
+            quizScreen.style.removeProperty('border-color');
         });
 
         it('calling animateWrongGuess N times always leaves animation classes present after the last call', function () {
@@ -154,7 +160,7 @@ describe('Wrong Guess Animation - Property Tests', function () {
                     fc.integer({ min: 1, max: 50 }),
                     function (n) {
                         // Clean up before each iteration
-                        inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow');
+                        quizScreen.classList.remove('wrong-guess-shake', 'wrong-guess-glow');
 
                         // Call animateWrongGuess N times in rapid succession
                         for (var i = 0; i < n; i++) {
@@ -162,11 +168,11 @@ describe('Wrong Guess Animation - Property Tests', function () {
                         }
 
                         // After the last call, animation classes must be present
-                        var hasShake = inputElement.classList.contains('wrong-guess-shake');
-                        var hasGlow = inputElement.classList.contains('wrong-guess-glow');
+                        var hasShake = quizScreen.classList.contains('wrong-guess-shake');
+                        var hasGlow = quizScreen.classList.contains('wrong-guess-glow');
 
                         // Clean up for next iteration
-                        inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow');
+                        quizScreen.classList.remove('wrong-guess-shake', 'wrong-guess-glow');
 
                         return hasShake && hasGlow;
                     }

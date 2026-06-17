@@ -24,11 +24,14 @@ body {
     border-radius: 15px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
     padding: 40px;
-    animation: fadeIn 0.3s ease-in;
 }
 
 .screen.hidden {
     display: none;
+}
+
+.screen-fade-in {
+    animation: fadeIn 0.3s ease-in;
 }
 
 @keyframes fadeIn {
@@ -763,19 +766,19 @@ body {
 }
 
 @keyframes redGlow {
-    0% { box-shadow: 0 0 0 rgba(255, 0, 0, 0); }
-    33.33% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.8); }
-    66.67% { box-shadow: 0 0 0 rgba(255, 0, 0, 0); }
-    83.33% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.8); }
-    100% { box-shadow: 0 0 0 rgba(255, 0, 0, 0); }
+    0% { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2), 0 0 0 rgba(255, 0, 0, 0); }
+    33.33% { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2), 0 0 30px 10px rgba(255, 0, 0, 0.7); }
+    66.67% { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2), 0 0 0 rgba(255, 0, 0, 0); }
+    83.33% { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2), 0 0 30px 10px rgba(255, 0, 0, 0.7); }
+    100% { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2), 0 0 0 rgba(255, 0, 0, 0); }
 }
 
 .wrong-guess-shake {
-    animation: shake 600ms ease-in-out;
+    animation: shake 600ms ease-in-out, redGlow 600ms ease-in-out !important;
 }
 
 .wrong-guess-glow {
-    animation: redGlow 600ms ease-in-out;
+    /* Both animations are driven by .wrong-guess-shake; this class is kept for detection/cleanup */
 }
 
 .wrong-guess-static {
@@ -784,7 +787,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
     .wrong-guess-shake {
-        animation: none;
+        animation: none !important;
     }
 
     .wrong-guess-glow {

@@ -1,13 +1,15 @@
 describe('Wrong Guess Animation', function () {
     var inputElement;
+    var quizScreen;
 
     beforeEach(function () {
         inputElement = document.getElementById('answerInput');
+        quizScreen = document.getElementById('quizScreen');
         // Clean up any leftover classes/styles from previous tests
-        inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
-        inputElement.style.removeProperty('transform');
-        inputElement.style.removeProperty('box-shadow');
-        inputElement.style.removeProperty('border-color');
+        quizScreen.classList.remove('wrong-guess-shake', 'wrong-guess-glow', 'wrong-guess-static');
+        quizScreen.style.removeProperty('transform');
+        quizScreen.style.removeProperty('box-shadow');
+        quizScreen.style.removeProperty('border-color');
         inputElement.value = '';
         inputElement.disabled = false;
     });
@@ -18,14 +20,14 @@ describe('Wrong Guess Animation', function () {
             spyOn(window, 'matchMedia').and.returnValue({ matches: false });
         });
 
-        it('adds .wrong-guess-shake class to the element', function () {
+        it('adds .wrong-guess-shake class to the quiz screen', function () {
             animateWrongGuess(inputElement);
-            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-shake')).toBe(true);
         });
 
-        it('adds .wrong-guess-glow class to the element', function () {
+        it('adds .wrong-guess-glow class to the quiz screen', function () {
             animateWrongGuess(inputElement);
-            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-glow')).toBe(true);
         });
     });
 
@@ -37,22 +39,22 @@ describe('Wrong Guess Animation', function () {
 
         it('removes .wrong-guess-shake after animationend fires', function () {
             animateWrongGuess(inputElement);
-            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-shake')).toBe(true);
 
             var event = new Event('animationend');
-            inputElement.dispatchEvent(event);
+            quizScreen.dispatchEvent(event);
 
-            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(false);
+            expect(quizScreen.classList.contains('wrong-guess-shake')).toBe(false);
         });
 
         it('removes .wrong-guess-glow after animationend fires', function () {
             animateWrongGuess(inputElement);
-            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-glow')).toBe(true);
 
             var event = new Event('animationend');
-            inputElement.dispatchEvent(event);
+            quizScreen.dispatchEvent(event);
 
-            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(false);
+            expect(quizScreen.classList.contains('wrong-guess-glow')).toBe(false);
         });
     });
 
@@ -69,25 +71,25 @@ describe('Wrong Guess Animation', function () {
 
         it('applies .wrong-guess-static when reduced motion is preferred', function () {
             animateWrongGuess(inputElement);
-            expect(inputElement.classList.contains('wrong-guess-static')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-static')).toBe(true);
         });
 
         it('does not apply .wrong-guess-shake when reduced motion is preferred', function () {
             animateWrongGuess(inputElement);
-            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(false);
+            expect(quizScreen.classList.contains('wrong-guess-shake')).toBe(false);
         });
 
         it('does not apply .wrong-guess-glow when reduced motion is preferred', function () {
             animateWrongGuess(inputElement);
-            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(false);
+            expect(quizScreen.classList.contains('wrong-guess-glow')).toBe(false);
         });
 
         it('removes .wrong-guess-static after 1000ms timeout', function () {
             animateWrongGuess(inputElement);
-            expect(inputElement.classList.contains('wrong-guess-static')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-static')).toBe(true);
 
             jasmine.clock().tick(1001);
-            expect(inputElement.classList.contains('wrong-guess-static')).toBe(false);
+            expect(quizScreen.classList.contains('wrong-guess-static')).toBe(false);
         });
     });
 
@@ -99,13 +101,13 @@ describe('Wrong Guess Animation', function () {
 
         it('re-applies animation classes when triggered again mid-animation', function () {
             animateWrongGuess(inputElement);
-            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(true);
-            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-shake')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-glow')).toBe(true);
 
             // Trigger again without animationend firing
             animateWrongGuess(inputElement);
-            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(true);
-            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-shake')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-glow')).toBe(true);
         });
     });
 
@@ -125,15 +127,15 @@ describe('Wrong Guess Animation', function () {
         it('triggers animation on empty input submission', function () {
             inputElement.value = '';
             submitAnswer();
-            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(true);
-            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-shake')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-glow')).toBe(true);
         });
 
         it('triggers animation on whitespace-only input submission', function () {
             inputElement.value = '   ';
             submitAnswer();
-            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(true);
-            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-shake')).toBe(true);
+            expect(quizScreen.classList.contains('wrong-guess-glow')).toBe(true);
         });
 
         it('does not call alert() on empty submission', function () {
@@ -202,12 +204,12 @@ describe('Wrong Guess Animation', function () {
             animateWrongGuess(inputElement);
 
             var event = new Event('animationend');
-            inputElement.dispatchEvent(event);
+            quizScreen.dispatchEvent(event);
 
             // No residual inline styles from animation
-            expect(inputElement.style.getPropertyValue('transform')).toBe('');
-            expect(inputElement.style.getPropertyValue('box-shadow')).toBe('');
-            expect(inputElement.style.getPropertyValue('border-color')).toBe('');
+            expect(quizScreen.style.getPropertyValue('transform')).toBe('');
+            expect(quizScreen.style.getPropertyValue('box-shadow')).toBe('');
+            expect(quizScreen.style.getPropertyValue('border-color')).toBe('');
         });
 
         it('input remains focusable after animation ends', function () {
@@ -215,7 +217,7 @@ describe('Wrong Guess Animation', function () {
             animateWrongGuess(inputElement);
 
             var event = new Event('animationend');
-            inputElement.dispatchEvent(event);
+            quizScreen.dispatchEvent(event);
 
             // Input should still be focused
             expect(document.activeElement).toBe(inputElement);
@@ -226,10 +228,10 @@ describe('Wrong Guess Animation', function () {
             animateWrongGuess(inputElement);
 
             var event = new Event('animationend');
-            inputElement.dispatchEvent(event);
+            quizScreen.dispatchEvent(event);
 
-            expect(inputElement.classList.contains('wrong-guess-shake')).toBe(false);
-            expect(inputElement.classList.contains('wrong-guess-glow')).toBe(false);
+            expect(quizScreen.classList.contains('wrong-guess-shake')).toBe(false);
+            expect(quizScreen.classList.contains('wrong-guess-glow')).toBe(false);
         });
     });
 });

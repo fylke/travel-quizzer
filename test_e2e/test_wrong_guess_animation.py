@@ -29,20 +29,20 @@ def _register_and_start(page: Page, base_url: str):
 
 
 def test_wrong_answer_adds_animation_classes(page: Page, base_url: str):
-    """Submit wrong answer → input has .wrong-guess-shake and .wrong-guess-glow classes."""
+    """Submit wrong answer → quiz screen has .wrong-guess-shake and .wrong-guess-glow classes."""
     _register_and_start(page, base_url)
 
     page.fill("#answerInput", "London")
     page.click("text=Submit Answer")
 
-    input_el = page.locator("#answerInput")
-    # Animation classes should be applied after wrong answer
-    expect(input_el).to_have_class(re.compile(r"wrong-guess-shake"), timeout=3000)
-    expect(input_el).to_have_class(re.compile(r"wrong-guess-glow"), timeout=3000)
+    quiz_screen = page.locator("#quizScreen")
+    # Animation classes should be applied to the quiz screen after wrong answer
+    expect(quiz_screen).to_have_class(re.compile(r"wrong-guess-shake"), timeout=3000)
+    expect(quiz_screen).to_have_class(re.compile(r"wrong-guess-glow"), timeout=3000)
 
 
 def test_empty_input_animates_without_alert(page: Page, base_url: str):
-    """Submit empty input → animation plays, no alert dialog appears."""
+    """Submit empty input → animation plays on quiz screen, no alert dialog appears."""
     _register_and_start(page, base_url)
 
     # Track if any dialog (alert) appears
@@ -53,41 +53,42 @@ def test_empty_input_animates_without_alert(page: Page, base_url: str):
     page.fill("#answerInput", "")
     page.click("text=Submit Answer")
 
-    input_el = page.locator("#answerInput")
-    # Animation classes should be applied
-    expect(input_el).to_have_class(re.compile(r"wrong-guess-shake"), timeout=3000)
-    expect(input_el).to_have_class(re.compile(r"wrong-guess-glow"), timeout=3000)
+    quiz_screen = page.locator("#quizScreen")
+    # Animation classes should be applied to quiz screen
+    expect(quiz_screen).to_have_class(re.compile(r"wrong-guess-shake"), timeout=3000)
+    expect(quiz_screen).to_have_class(re.compile(r"wrong-guess-glow"), timeout=3000)
 
     # No alert dialog should have appeared
     assert len(dialog_appeared) == 0, "Alert dialog appeared but should not have"
 
 
 def test_animation_ends_classes_removed_input_usable(page: Page, base_url: str):
-    """Animation ends → classes removed, input usable."""
+    """Animation ends → classes removed from quiz screen, input usable."""
     _register_and_start(page, base_url)
 
     page.fill("#answerInput", "London")
     page.click("text=Submit Answer")
 
-    input_el = page.locator("#answerInput")
+    quiz_screen = page.locator("#quizScreen")
     # Verify animation starts
-    expect(input_el).to_have_class(re.compile(r"wrong-guess-shake"), timeout=3000)
+    expect(quiz_screen).to_have_class(re.compile(r"wrong-guess-shake"), timeout=3000)
 
     # Wait for animation to complete (600ms animation + 1000ms fallback + buffer)
     page.wait_for_timeout(1500)
 
     # Classes should be removed after animation ends
-    expect(input_el).not_to_have_class(re.compile(r"wrong-guess-shake"), timeout=3000)
-    expect(input_el).not_to_have_class(re.compile(r"wrong-guess-glow"), timeout=3000)
+    expect(quiz_screen).not_to_have_class(re.compile(r"wrong-guess-shake"), timeout=3000)
+    expect(quiz_screen).not_to_have_class(re.compile(r"wrong-guess-glow"), timeout=3000)
 
     # Input should still be usable
+    input_el = page.locator("#answerInput")
     expect(input_el).to_be_enabled()
     page.fill("#answerInput", "test typing")
     assert page.locator("#answerInput").input_value() == "test typing"
 
 
 def test_reduced_motion_static_border_only(page: Page, base_url: str):
-    """With prefers-reduced-motion emulated → static red border only, no motion classes."""
+    """With prefers-reduced-motion emulated → static red border on quiz screen only, no motion classes."""
     # Emulate reduced motion BEFORE navigating
     page.emulate_media(reduced_motion="reduce")
 
@@ -96,11 +97,11 @@ def test_reduced_motion_static_border_only(page: Page, base_url: str):
     page.fill("#answerInput", "London")
     page.click("text=Submit Answer")
 
-    input_el = page.locator("#answerInput")
+    quiz_screen = page.locator("#quizScreen")
 
     # Should have static class instead of animation classes
-    expect(input_el).to_have_class(re.compile(r"wrong-guess-static"), timeout=3000)
+    expect(quiz_screen).to_have_class(re.compile(r"wrong-guess-static"), timeout=3000)
 
     # Should NOT have motion-based animation classes
-    expect(input_el).not_to_have_class(re.compile(r"wrong-guess-shake"))
-    expect(input_el).not_to_have_class(re.compile(r"wrong-guess-glow"))
+    expect(quiz_screen).not_to_have_class(re.compile(r"wrong-guess-shake"))
+    expect(quiz_screen).not_to_have_class(re.compile(r"wrong-guess-glow"))
