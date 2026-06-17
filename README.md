@@ -16,7 +16,7 @@ travel-quizzer/
 │   └── script.js          # Frontend logic
 ├── database/
 │   └── quiz_data.db       # SQLite database
-├── test_unit/             # Unit tests
+├── test_backend/            # Backend unit tests
 ├── test_e2e/              # End-to-end Playwright tests
 ├── pyproject.toml         # Project configuration
 ├── Containerfile          # Container build configuration

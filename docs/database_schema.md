@@ -8,6 +8,8 @@ erDiagram
         varchar2 hint3
         varchar2 hint4
         varchar2 hint5
+        json images
+        json correct_answers
     }
 
     user {
@@ -15,6 +17,7 @@ erDiagram
         varchar2 password_hash
         varchar2 name
         varchar2 email
+        boolean is_admin
     }
 
     quiz_result {

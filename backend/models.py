@@ -27,6 +27,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     name = db.Column(db.String(128), nullable=False)
     email = db.Column(db.String(128), nullable=False, unique=True)
+    is_admin = db.Column(db.Boolean, nullable=False, default=False)
 
     results = db.relationship('QuizResult', back_populates='user', cascade='all, delete-orphan')
 

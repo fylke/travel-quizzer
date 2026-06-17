@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Jasmine Spec Runner - Admin Panel</title>
+    <!-- Jasmine 5.x CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/jasmine.min.css">
+    <!-- Jasmine 5.x Core -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/jasmine.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/jasmine-html.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/boot0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/boot1.min.js"></script>
+</head>
+<body>
+    <!-- Minimal DOM fixtures needed by script.js DOMContentLoaded listener -->
+    <div class="container">
+        <div id="welcomeScreen" class="screen"></div>
+        <div id="statusScreen" class="screen hidden"></div>
+        <div id="quizScreen" class="screen hidden"></div>
+        <div id="feedbackScreen" class="screen hidden"></div>
+        <div id="resultsScreen" class="screen hidden"></div>
+        <div id="adminScreen" class="screen hidden"></div>
+        <input type="text" id="answerInput">
+        <input type="email" id="email">
+        <input type="password" id="password">
+    </div>
+
+    <!-- Source file under test -->
+    <script src="../frontend/script.js"></script>
+
+    <!-- Spec files -->
+    <script src="spec/adminSpec.js"></script>
+</body>
+</html>
