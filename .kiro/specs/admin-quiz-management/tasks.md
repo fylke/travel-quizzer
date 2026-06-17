@@ -109,14 +109,14 @@ This plan implements admin CRUD operations for quiz destinations in the Travel Q
 - [x] 6. Checkpoint - Verify full stack integration
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Write unit tests for admin API
-  - [ ]* 7.1 Write unit tests for validation and normalization
+- [x] 7. Write unit tests for admin API
+  - [x]* 7.1 Write unit tests for validation and normalization
     - Create `test_unit/test_admin_validation.py`
     - Test valid payloads, boundary values (name exactly 128 chars, hints exactly 256 chars), invalid payloads (empty name, whitespace-only hints, too few/many images, invalid URLs, too many answers)
     - Test `normalize_answers` with mixed case, spaces, already-normalized values
     - _Requirements: 4.2, 4.3, 4.5, 8.1, 8.2, 8.3_
 
-  - [ ]* 7.2 Write unit tests for admin API endpoints
+  - [x]* 7.2 Write unit tests for admin API endpoints
     - Create `test_unit/test_admin_api.py`
     - Test auth: unauthenticated returns 401, non-admin returns 403, admin succeeds
     - Test CRUD operations: create returns 201, list returns ordered destinations, get returns full data, update replaces fields, delete removes destination
@@ -124,7 +124,7 @@ This plan implements admin CRUD operations for quiz destinations in the Travel Q
     - Test cascade: deleting a destination with quiz results removes both
     - _Requirements: 1.2, 1.3, 1.4, 3.1, 4.1, 4.6, 5.2, 5.3, 6.2, 6.3, 7.1_
 
-  - [ ]* 7.3 Write property test for update round-trip (Property 7)
+  - [x]* 7.3 Write property test for update round-trip (Property 7)
     - **Property 7: Update round-trip**
     - Use Hypothesis to generate valid destination data, create it via API, update with new valid data, verify GET returns the updated values with answers normalized
     - Add to `test_unit/test_admin_properties.py`

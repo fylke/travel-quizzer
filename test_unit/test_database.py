@@ -112,9 +112,9 @@ class DatabaseModelTestCase(unittest.TestCase):
             db.session.delete(user)
             db.session.commit()
 
-            self.assertIsNone(User.query.get(user_id))
+            self.assertIsNone(db.session.get(User, user_id))
             self.assertIsNone(QuizResult.query.filter_by(user_id=user_id).first())
-            self.assertIsNotNone(Destination.query.get(destination.id))
+            self.assertIsNotNone(db.session.get(Destination, destination.id))
 
     def test_user_email_must_be_unique(self):
         with app.app_context():
