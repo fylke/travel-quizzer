@@ -1,0 +1,107 @@
+# AGENTS.md
+
+Guidelines for AI agents working on the Travel Quizzer project.
+
+## Project Overview
+
+A Flask-based travel quiz webapp with a vanilla JS frontend. Users log in, answer geography/travel questions with progressive hints, and earn points. Admins can manage quiz destinations via a CRUD API.
+
+## Tech Stack
+
+- **Backend**: Python 3.10+, Flask, SQLAlchemy, SQLite
+- **Frontend**: Vanilla JavaScript, HTML5, CSS3
+- **Package manager**: [uv](https://docs.astral.sh/uv/)
+- **Containerization**: Podman / podman-compose
+- **CI**: GitHub Actions
+
+## Setup
+
+```bash
+uv sync            # Install all dependencies
+uv sync --group test  # Include test dependencies (Playwright, Hypothesis)
+```
+
+## Running the App
+
+```bash
+uv run python -m backend   # Starts Flask on http://localhost:5000
+```
+
+Or via Podman:
+```bash
+podman-compose -f podman-compose.yml up --build
+```
+
+## Testing
+
+### Unit Tests
+
+```bash
+uv run unit-test
+```
+
+Uses `unittest` and discovers tests in the `test_backend/` directory. Some test files use the `hypothesis` library for property-based testing.
+
+### End-to-End Tests
+
+```bash
+uv run playwright install   # First time only
+uv run e2e-test
+```
+
+Uses `pytest` + `playwright` against `test_e2e/`.
+
+### Frontend Tests
+
+Jasmine specs live in `test_frontend/spec/`. Run via `test_frontend/run_tests.py`.
+
+## Code Style
+
+- **Formatter**: Black (line length default 88)
+- **Import sorting**: isort (profile: black)
+- Pre-commit hooks enforce both on Python files.
+
+Run manually:
+```bash
+uv run black .
+uv run isort .
+```
+
+## Project Layout
+
+```
+backend/          # Flask application (routes, models, admin helpers, stats)
+frontend/         # Static HTML/CSS/JS served by Flask
+database/         # SQLite database file (quiz_data.db)
+docs/             # Design documentation and diagrams
+scripts/          # CLI entry points for test runners
+test_backend/     # Unit tests (unittest + hypothesis)
+test_e2e/         # End-to-end tests (pytest + playwright)
+test_frontend/    # Frontend Jasmine specs
+```
+
+## Key Architecture Decisions
+
+- Server-side quiz state: hint difficulty, remaining guesses, and scoring are tracked in the `quiz_result` table — never trust the client.
+- CSRF protection via `X-CSRF-Token` header matched against session-stored tokens.
+- Rate limiting on `/api/login` (5 per minute) using flask-limiter.
+- Session-based auth with `login_required` and `admin_required` decorators.
+- Database URL is configurable via `QUIZ_DATABASE_URL` or `DATABASE_URL` env vars; defaults to `database/quiz_data.db`.
+
+## Environment Variables
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `SECRET_KEY` | Flask session signing (required in production) | insecure fallback in dev |
+| `QUIZ_DATABASE_URL` / `DATABASE_URL` | SQLAlchemy database URI | `sqlite:///database/quiz_data.db` |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed origins | `*` |
+| `RATELIMIT_STORAGE_URI` | Flask-Limiter backend | `memory://` |
+| `SESSION_COOKIE_SECURE` | Set cookie secure flag | `false` |
+
+## Conventions
+
+- Keep routes in `backend/__init__.py`; extract helpers to dedicated modules (`admin.py`, `stats.py`).
+- Destination hints are stored as columns `hint1`–`hint5` (difficulty 1 = easiest, 5 = hardest).
+- Correct answers are stored as a JSON list of lowercase strings.
+- All API endpoints return JSON. Errors use `{"error": "message"}` with appropriate HTTP status codes.
+- Tests use an in-memory SQLite database — never modify `database/quiz_data.db` in tests.
