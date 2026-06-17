@@ -210,7 +210,8 @@ async function submitAnswer() {
     const answerInput = document.getElementById('answerInput');
     const userAnswer = answerInput.value.trim();
     if (!userAnswer) {
-        alert('Please enter an answer');
+        animateWrongGuess(answerInput);
+        answerInput.focus();
         return;
     }
 
@@ -233,6 +234,7 @@ async function submitAnswer() {
             showFeedback(true, result.points, result.answer);
         } else if (result.remainingGuesses !== undefined && result.remainingGuesses > 0) {
             // Wrong but still has guesses — backend returned next hint
+            animateWrongGuess(answerInput);
             updateHintDisplay(result.hint, result.hintDifficulty, result.remainingGuesses);
             document.getElementById('answerInput').value = '';
             document.getElementById('answerInput').focus();
@@ -690,6 +692,75 @@ function escapeAttr(str) {
 }
 
 // ==================== End Admin Panel ====================
+
+// ==================== Wrong Guess Animation ====================
+
+/**
+ * Applies wrong-guess animation to the given input element.
+ * - If prefers-reduced-motion is active: applies static red border for 1s.
+ * - Otherwise: applies shake + glow CSS animations (600ms).
+ * - Handles re-triggering if animation is already active.
+ * - Cleans up all animation classes/styles on completion.
+ *
+ * @param {HTMLInputElement} inputElement - The input to animate
+ */
+function animateWrongGuess(inputElement) {
+    if (!inputElement) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion) {
+        // Static fallback: apply red border class for 1 second
+        inputElement.classList.remove('wrong-guess-static');
+        inputElement.classList.add('wrong-guess-static');
+        setTimeout(() => {
+            inputElement.classList.remove('wrong-guess-static');
+            // Ensure no residual inline styles
+            inputElement.style.removeProperty('transform');
+            inputElement.style.removeProperty('box-shadow');
+            inputElement.style.removeProperty('border-color');
+        }, 1000);
+        return;
+    }
+
+    // Remove existing animation classes to allow re-trigger
+    inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow');
+
+    // Force reflow so re-adding classes restarts the animation
+    void inputElement.offsetWidth;
+
+    // Apply animation classes
+    inputElement.classList.add('wrong-guess-shake', 'wrong-guess-glow');
+
+    // Cleanup function to remove classes and residual inline styles
+    function cleanup() {
+        inputElement.classList.remove('wrong-guess-shake', 'wrong-guess-glow');
+        inputElement.style.removeProperty('transform');
+        inputElement.style.removeProperty('box-shadow');
+        inputElement.style.removeProperty('border-color');
+    }
+
+    // Listen for animationend to remove classes (once)
+    let cleaned = false;
+    function onAnimationEnd() {
+        if (cleaned) return;
+        cleaned = true;
+        cleanup();
+    }
+
+    inputElement.addEventListener('animationend', onAnimationEnd, { once: true });
+
+    // Defensive fallback: remove classes after 1000ms if animationend never fires
+    setTimeout(() => {
+        if (!cleaned) {
+            cleaned = true;
+            inputElement.removeEventListener('animationend', onAnimationEnd);
+            cleanup();
+        }
+    }, 1000);
+}
+
+// ==================== End Wrong Guess Animation ====================
 
 // Allow Enter key to submit answer
 document.addEventListener('DOMContentLoaded', () => {
