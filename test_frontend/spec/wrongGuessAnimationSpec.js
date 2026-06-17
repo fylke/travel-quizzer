@@ -84,11 +84,11 @@ describe('Wrong Guess Animation', function () {
             expect(quizScreen.classList.contains('wrong-guess-glow')).toBe(false);
         });
 
-        it('removes .wrong-guess-static after 1000ms timeout', function () {
+        it('removes .wrong-guess-static after timeout', function () {
             animateWrongGuess(inputElement);
             expect(quizScreen.classList.contains('wrong-guess-static')).toBe(true);
 
-            jasmine.clock().tick(1001);
+            jasmine.clock().tick(1301);
             expect(quizScreen.classList.contains('wrong-guess-static')).toBe(false);
         });
     });

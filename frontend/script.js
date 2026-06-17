@@ -720,7 +720,7 @@ function escapeAttr(str) {
 /**
  * Applies wrong-guess animation to the quiz screen container.
  * - If prefers-reduced-motion is active: applies static red border for 1s.
- * - Otherwise: applies shake + glow CSS animations (600ms).
+ * - Otherwise: applies shake + glow CSS animations (800ms).
  * - Handles re-triggering if animation is already active.
  * - Cleans up all animation classes/styles on completion.
  *
@@ -733,16 +733,14 @@ function animateWrongGuess(inputElement) {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (prefersReducedMotion) {
-        // Static fallback: apply red border class for 1 second
+        // Static fallback: two-pulse glow animation (1.2s)
+        target.classList.remove('screen-fade-in');
         target.classList.remove('wrong-guess-static');
+        void target.offsetWidth;
         target.classList.add('wrong-guess-static');
         setTimeout(() => {
             target.classList.remove('wrong-guess-static');
-            // Ensure no residual inline styles
-            target.style.removeProperty('transform');
-            target.style.removeProperty('box-shadow');
-            target.style.removeProperty('border-color');
-        }, 1000);
+        }, 1300);
         return;
     }
 
@@ -761,9 +759,11 @@ function animateWrongGuess(inputElement) {
     // Cleanup function to remove classes and residual inline styles
     function cleanup() {
         target.classList.remove('wrong-guess-shake', 'wrong-guess-glow');
+        target.style.removeProperty('left');
         target.style.removeProperty('transform');
         target.style.removeProperty('box-shadow');
         target.style.removeProperty('border-color');
+        target.style.removeProperty('position');
     }
 
     // Listen for animationend to remove classes (once)
@@ -778,14 +778,14 @@ function animateWrongGuess(inputElement) {
 
     target.addEventListener('animationend', onAnimationEnd);
 
-    // Defensive fallback: remove classes after 1000ms if animationend never fires
+    // Defensive fallback: remove classes after 1500ms if animationend never fires
     setTimeout(() => {
         if (!cleaned) {
             cleaned = true;
             target.removeEventListener('animationend', onAnimationEnd);
             cleanup();
         }
-    }, 1000);
+    }, 1500);
 }
 
 // ==================== End Wrong Guess Animation ====================

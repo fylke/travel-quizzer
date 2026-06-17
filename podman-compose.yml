@@ -6,6 +6,8 @@ services:
     container_name: travel-quizzer
     ports:
       - "9696:5000"
+    volumes:
+      - ./frontend:/app/frontend:ro
     environment: []
     restart: unless-stopped
     healthcheck:
