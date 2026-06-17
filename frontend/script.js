@@ -16,6 +16,25 @@ function showScreen(screenId) {
     document.getElementById(screenId).classList.remove('hidden');
 }
 
+function showNotification(message, type = 'error') {
+    // Remove any existing notification
+    const existing = document.getElementById('appNotification');
+    if (existing) existing.remove();
+
+    const el = document.createElement('div');
+    el.id = 'appNotification';
+    el.className = `app-notification app-notification-${type}`;
+    el.setAttribute('role', 'alert');
+    el.textContent = message;
+    document.body.appendChild(el);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        el.classList.add('app-notification-fade');
+        el.addEventListener('transitionend', () => el.remove());
+    }, 5000);
+}
+
 function showAuthError(message) {
     const el = document.getElementById('authError');
     if (el) {
@@ -184,7 +203,7 @@ async function loadQuestion() {
         const response = await fetch(`${API_BASE}/api/quiz`);
         if (!response.ok) {
             const error = await response.json();
-            alert(error.error || 'Unable to load quiz.');
+            showNotification(error.error || 'Unable to load quiz.');
             return;
         }
 
@@ -192,7 +211,7 @@ async function loadQuestion() {
         displayQuiz(data);
     } catch (error) {
         console.error('Error loading quiz:', error);
-        alert('Failed to load quiz. Please refresh the page.');
+        showNotification('Failed to load quiz. Please refresh the page.');
     }
 }
 
@@ -225,7 +244,7 @@ async function submitAnswer() {
 
         const result = await response.json();
         if (!response.ok) {
-            alert(result.error || 'Error checking answer');
+            showNotification(result.error || 'Error checking answer');
             submitting = false;
             return;
         }
@@ -245,7 +264,7 @@ async function submitAnswer() {
         }
     } catch (error) {
         console.error('Error checking answer:', error);
-        alert('Error checking answer');
+        showNotification('Error checking answer');
         submitting = false;
     }
 }
@@ -370,14 +389,14 @@ async function runRandomQuiz() {
 async function runSpecificQuiz() {
     const quizId = document.getElementById('specificQuizId').value.trim();
     if (!quizId) {
-        alert('Please enter a quiz ID.');
+        showNotification('Please enter a quiz ID.');
         return;
     }
     try {
         const response = await fetch(`${API_BASE}/api/quiz/${quizId}`);
         if (!response.ok) {
             const err = await response.json();
-            alert(err.error || 'Quiz not found.');
+            showNotification(err.error || 'Quiz not found.');
             return;
         }
         const data = await response.json();
@@ -385,7 +404,7 @@ async function runSpecificQuiz() {
         displayQuiz(data);
     } catch (error) {
         console.error('Error starting specific quiz:', error);
-        alert('Failed to load quiz.');
+        showNotification('Failed to load quiz.');
     }
 }
 

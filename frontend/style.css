@@ -791,3 +791,38 @@ body {
         animation: none;
     }
 }
+
+/* ==================== App Notification Toast ==================== */
+
+.app-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 14px 24px;
+    border-radius: 8px;
+    font-size: 0.95em;
+    font-weight: 500;
+    z-index: 2000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    max-width: 90%;
+    text-align: center;
+}
+
+.app-notification-error {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+}
+
+.app-notification-info {
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #90caf9;
+}
+
+.app-notification-fade {
+    opacity: 0;
+}
