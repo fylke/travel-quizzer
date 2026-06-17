@@ -4,7 +4,7 @@ Usage:
     uv run python -m scripts.seed_db
 
 Or inside the container:
-    podman exec travel-quizzer python -m scripts.seed_db
+    podman exec travel-quizzer uv run --no-project python -m scripts.seed_db
 """
 
 import sys
@@ -91,21 +91,28 @@ def seed():
     with app.app_context():
         db.create_all()
 
-        # Seed admin user
-        admin_email = "admin@travel-quizzer.local"
-        admin_password = "admin123"
-        if User.query.filter_by(email=admin_email).first():
-            print(f"  Admin user '{admin_email}' already exists.")
-        else:
-            admin = User(
-                name="Admin",
-                email=admin_email,
-                password_hash=generate_password_hash(admin_password),
-                is_admin=True,
-            )
-            db.session.add(admin)
-            db.session.commit()
-            print(f"  Created admin user: {admin_email} / {admin_password}")
+        # Seed admin user(s)
+        admin_accounts = [
+            ("admin@example.com", "adminpass123"),
+            ("admin@travel-quizzer.local", "admin123"),
+        ]
+        for admin_email, admin_password in admin_accounts:
+            admin = User.query.filter_by(email=admin_email).first()
+            if admin:
+                admin.password_hash = generate_password_hash(admin_password)
+                admin.is_admin = True
+                print(f"  Updated admin user: {admin_email} / {admin_password}")
+            else:
+                admin = User(
+                    name="Admin",
+                    email=admin_email,
+                    password_hash=generate_password_hash(admin_password),
+                    is_admin=True,
+                )
+                db.session.add(admin)
+                print(f"  Created admin user: {admin_email} / {admin_password}")
+
+        db.session.commit()
 
         existing = Destination.query.count()
         if existing > 0:
