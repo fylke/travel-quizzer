@@ -18,7 +18,7 @@ jobs:
         run: uv python install 3.14
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --all-groups
 
       - name: Ensure database directory exists
         run: mkdir -p database

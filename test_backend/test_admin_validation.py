@@ -1,7 +1,5 @@
 """Unit tests for backend.admin validation and normalization functions."""
 
-import pytest
-
 from backend.admin import normalize_answers, validate_destination_payload
 
 
