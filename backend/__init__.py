@@ -11,6 +11,7 @@ import re
 from werkzeug.security import check_password_hash, generate_password_hash
 from .models import db, Destination, QuizResult, User
 from .admin import validate_destination_payload, normalize_answers
+from .stats import compute_stats
 
 # Basic email format check — intentionally lenient but catches obvious junk
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -215,6 +216,33 @@ def get_status():
         "totalPoints": total_points,
         "quizzesOngoing": len([r for r in results if r.ongoing]),
     })
+
+
+@app.route('/api/stats', methods=['GET'])
+@login_required
+def get_stats():
+    """Return detailed cumulative statistics for the current user."""
+    user = get_current_user()
+    try:
+        results = QuizResult.query.filter_by(user_id=user.id).all()
+    except Exception:
+        return jsonify({"error": "Unable to retrieve statistics"}), 500
+
+    completed = [r for r in results if not r.ongoing]
+    ongoing = [r for r in results if r.ongoing]
+
+    completed_dicts = [
+        {
+            "hint_difficulty": r.hint_difficulty,
+            "remaining_guesses": r.remaining_guesses,
+            "destination_id": r.destination_id,
+        }
+        for r in completed
+    ]
+
+    stats = compute_stats(completed_dicts)
+    stats["quizzesOngoing"] = len(ongoing)
+    return jsonify(stats)
 
 
 @app.route('/api/quiz', methods=['GET'])

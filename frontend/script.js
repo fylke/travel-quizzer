@@ -330,15 +330,19 @@ function retakeQuiz() {
 async function showStatusScreen() {
     showScreen('statusScreen');
     try {
-        const response = await fetch(`${API_BASE}/api/status`);
+        const response = await fetch(`${API_BASE}/api/stats`);
         if (response.ok) {
             const stats = await response.json();
+            document.getElementById('statsCumulativeScore').textContent = stats.cumulativeScore;
             document.getElementById('statsCompleted').textContent = stats.quizzesCompleted;
-            document.getElementById('statsPoints').textContent = stats.totalPoints;
+            document.getElementById('statsAverageScore').textContent = stats.averageScore;
+            document.getElementById('statsBestScore').textContent = stats.bestScore;
+            document.getElementById('statsAccuracyRate').textContent = stats.accuracyRate + '%';
+            document.getElementById('statsCurrentStreak').textContent = stats.currentStreak;
             document.getElementById('statsOngoing').textContent = stats.quizzesOngoing;
         }
     } catch (error) {
-        console.error('Error loading status:', error);
+        console.error('Error loading stats:', error);
     }
 
     // Show/hide admin link based on user role
