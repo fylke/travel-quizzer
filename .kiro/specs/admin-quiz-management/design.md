@@ -375,7 +375,7 @@ Property-based testing is appropriate for this feature because the validation la
 ### Test Organization
 
 ```
-test_unit/
+test_backend/
   test_admin_validation.py    # Validation function unit tests
   test_admin_api.py           # API endpoint tests with Flask test client
   test_admin_properties.py    # Property-based tests (Hypothesis)

@@ -54,7 +54,7 @@ def test_login_after_registration(page: Page, base_url: str, playwright):
     """A user can register and then log in — UI only verifies the login form submits.
 
     The full register→logout→login cycle is covered by the unit/integration
-    test (test_unit/test_main.py::test_login_after_registration) which is more
+    test (test_backend/test_main.py::test_login_after_registration) which is more
     reliable and faster.  Here we just confirm the login form works for an
     existing user.
     """

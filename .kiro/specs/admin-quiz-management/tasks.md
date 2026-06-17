@@ -130,7 +130,7 @@ This plan implements admin CRUD operations for quiz destinations in the Travel Q
     - Add to `test_unit/test_admin_properties.py`
     - **Validates: Requirements 5.2**
 
-- [~] 8. Final checkpoint - Ensure all tests pass
+- [x] 8. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

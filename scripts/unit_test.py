@@ -6,7 +6,7 @@ import unittest
 
 def main():
     loader = unittest.TestLoader()
-    suite = loader.discover("test_unit", pattern="test_*.py")
+    suite = loader.discover("test_backend", pattern="test_*.py")
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
     sys.exit(0 if result.wasSuccessful() else 1)
