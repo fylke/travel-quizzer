@@ -86,9 +86,9 @@ uv run e2e-test
 
 #### Running with Podman Compose (Recommended)
 
-1. **Build and start the container:**
+1. **Build and start the container (-d for detached, to not block terminal):**
    ```bash
-   podman-compose -f podman-compose.yml up --build
+   podman-compose -f podman-compose.yml up --build -d
    ```
 
 2. **Open your browser and go to:**
