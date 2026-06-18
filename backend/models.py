@@ -20,7 +20,6 @@ class Destination(db.Model):
     hint4_source = db.Column(db.String(512), nullable=True)
     hint5 = db.Column(db.String(256), nullable=False)
     hint5_source = db.Column(db.String(512), nullable=True)
-    images = db.Column(db.JSON, nullable=False)
     correct_answers = db.Column(db.JSON, nullable=False)
 
     results = db.relationship('QuizResult', back_populates='destination', cascade='all, delete-orphan')

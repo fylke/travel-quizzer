@@ -28,13 +28,6 @@ name_st = st.text(
 # Strategy: hint strings (non-empty)
 hint_st = st.text(min_size=1, max_size=200)
 
-# Strategy: list of image URL strings (at least 1)
-images_st = st.lists(
-    st.text(min_size=1, max_size=200),
-    min_size=1,
-    max_size=5,
-)
-
 # Strategy: list of correct answer strings (at least 1, lowercase)
 correct_answers_st = st.lists(
     st.text(
@@ -55,7 +48,6 @@ destination_st = st.fixed_dictionaries(
         "hint3": hint_st,
         "hint4": hint_st,
         "hint5": hint_st,
-        "images": images_st,
         "correct_answers": correct_answers_st,
     }
 )
@@ -100,7 +92,6 @@ class TestSeedScriptIdempotency(unittest.TestCase):
                     "hint3": dest.hint3,
                     "hint4": dest.hint4,
                     "hint5": dest.hint5,
-                    "images": dest.images,
                     "correct_answers": dest.correct_answers,
                 }
             )
@@ -128,7 +119,6 @@ class TestSeedScriptIdempotency(unittest.TestCase):
                 hint3=dest_data["hint3"],
                 hint4=dest_data["hint4"],
                 hint5=dest_data["hint5"],
-                images=dest_data["images"],
                 correct_answers=dest_data["correct_answers"],
             )
             db.session.add(dest)

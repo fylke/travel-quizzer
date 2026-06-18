@@ -9,6 +9,7 @@ services:
     volumes:
       - ./frontend:/app/frontend:ro
       - ./data:/app/data:ro
+      - ./media:/app/media:ro
     environment:
       QUIZ_DATABASE_URL: postgresql+psycopg2://quizzer:quizzer_pass@postgres:5432/travel_quizzer
     depends_on:

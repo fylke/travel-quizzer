@@ -18,10 +18,6 @@ def _valid_payload(**overrides) -> dict:
             "Hint four",
             "Hint five",
         ],
-        "images": [
-            "https://example.com/img1.jpg",
-            "https://example.com/img2.jpg",
-        ],
         "correct_answers": ["paris", "paris, france"],
     }
     payload.update(overrides)
@@ -125,46 +121,6 @@ class TestValidateHintsField:
 # ===========================================================================
 # validate_destination_payload – images field
 # ===========================================================================
-
-
-class TestValidateImagesField:
-    def test_missing_images_returns_error(self):
-        payload = _valid_payload()
-        del payload["images"]
-        is_valid, errors = validate_destination_payload(payload)
-        assert is_valid is False
-        assert any("images" in e for e in errors)
-
-    def test_fewer_than_2_images_returns_error(self):
-        is_valid, errors = validate_destination_payload(
-            _valid_payload(images=["https://example.com/img.jpg"])
-        )
-        assert is_valid is False
-        assert any("images" in e for e in errors)
-
-    def test_more_than_10_images_returns_error(self):
-        images = [f"https://example.com/img{i}.jpg" for i in range(11)]
-        is_valid, errors = validate_destination_payload(_valid_payload(images=images))
-        assert is_valid is False
-        assert any("images" in e for e in errors)
-
-    def test_image_url_without_http_prefix_returns_error(self):
-        images = ["https://example.com/ok.jpg", "ftp://bad.com/img.jpg"]
-        is_valid, errors = validate_destination_payload(_valid_payload(images=images))
-        assert is_valid is False
-        assert any("images" in e and "http" in e for e in errors)
-
-    def test_exactly_2_images_is_valid(self):
-        images = ["https://a.com/1.jpg", "http://b.com/2.jpg"]
-        is_valid, errors = validate_destination_payload(_valid_payload(images=images))
-        assert is_valid is True
-        assert errors == []
-
-    def test_exactly_10_images_is_valid(self):
-        images = [f"https://example.com/img{i}.jpg" for i in range(10)]
-        is_valid, errors = validate_destination_payload(_valid_payload(images=images))
-        assert is_valid is True
-        assert errors == []
 
 
 # ===========================================================================

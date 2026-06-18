@@ -20,35 +20,30 @@ SAMPLE_DESTINATIONS = [
         "id": 1,
         "name": "tokyo",
         "hint1": "H1", "hint2": "H2", "hint3": "H3", "hint4": "H4", "hint5": "H5",
-        "images": ["img1.jpg"],
         "correct_answers": ["tokyo, japan"],
     },
     {
         "id": 2,
         "name": "paris",
         "hint1": "H1", "hint2": "H2", "hint3": "H3", "hint4": "H4", "hint5": "H5",
-        "images": ["img2.jpg"],
         "correct_answers": ["paris, france"],
     },
     {
         "id": 3,
         "name": "new york",
         "hint1": "H1", "hint2": "H2", "hint3": "H3", "hint4": "H4", "hint5": "H5",
-        "images": ["img3.jpg"],
         "correct_answers": ["new york, usa"],
     },
     {
         "id": 4,
         "name": "sydney",
         "hint1": "H1", "hint2": "H2", "hint3": "H3", "hint4": "H4", "hint5": "H5",
-        "images": ["img4.jpg"],
         "correct_answers": ["sydney, australia"],
     },
     {
         "id": 5,
         "name": "rome",
         "hint1": "H1", "hint2": "H2", "hint3": "H3", "hint4": "H4", "hint5": "H5",
-        "images": ["img5.jpg"],
         "correct_answers": ["rome, italy"],
     },
 ]
@@ -298,7 +293,7 @@ class PropertyTestDataIsolation(unittest.TestCase):
                 dest = Destination(
                     id=did, name=f"dest_{did}",
                     hint1="H1", hint2="H2", hint3="H3", hint4="H4", hint5="H5",
-                    images=["img.jpg"], correct_answers=["answer"],
+                    correct_answers=["answer"],
                 )
                 db.session.add(dest)
 

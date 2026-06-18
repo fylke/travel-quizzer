@@ -23,7 +23,6 @@ TEST_DESTINATIONS = [
         "hint3": f"Hint 3 for city {i}",
         "hint4": f"Hint 4 for city {i}",
         "hint5": f"Hint 5 for city {i}",
-        "images": [f"https://example.com/city{i}.jpg"],
         "correct_answers": [f"test city {i}"],
     }
     for i in range(1, 6)
@@ -82,8 +81,6 @@ class TestSeedEmptyDatabase(unittest.TestCase):
                 self.assertTrue(dest.hint3, f"Destination {dest.id} has empty hint3")
                 self.assertTrue(dest.hint4, f"Destination {dest.id} has empty hint4")
                 self.assertTrue(dest.hint5, f"Destination {dest.id} has empty hint5")
-                self.assertIsInstance(dest.images, list)
-                self.assertGreater(len(dest.images), 0)
                 self.assertIsInstance(dest.correct_answers, list)
                 self.assertGreater(len(dest.correct_answers), 0)
 

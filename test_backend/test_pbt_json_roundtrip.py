@@ -35,7 +35,7 @@ unique_name_st = st.text(
 class TestJsonColumnRoundTrip(unittest.TestCase):
     """Property 1: JSON Column Round-Trip Fidelity.
 
-    For any valid Python list of strings (representing images or correct_answers),
+    For any valid Python list of strings (representing correct_answers),
     writing it to a JSON column via SQLAlchemy and reading it back SHALL produce
     an identical Python list — same elements, same order, same types.
 
@@ -58,12 +58,10 @@ class TestJsonColumnRoundTrip(unittest.TestCase):
     @settings(max_examples=20, deadline=5000)
     @given(
         name=unique_name_st,
-        images=json_string_list_st,
         correct_answers=json_string_list_st,
     )
-    def test_json_round_trip_fidelity(self, name, images, correct_answers):
-        """Writing a list of strings to JSON columns and reading back yields identical data."""
-        # Write a Destination with the generated lists
+    def test_json_round_trip_fidelity(self, name, correct_answers):
+        """Writing a list of strings to a JSON column and reading back yields identical data."""
         dest = Destination(
             name=name,
             hint1="h1",
@@ -71,7 +69,6 @@ class TestJsonColumnRoundTrip(unittest.TestCase):
             hint3="h3",
             hint4="h4",
             hint5="h5",
-            images=images,
             correct_answers=correct_answers,
         )
         db.session.add(dest)
@@ -86,7 +83,6 @@ class TestJsonColumnRoundTrip(unittest.TestCase):
         loaded = db.session.get(Destination, dest_id)
 
         # Assert round-trip equality
-        self.assertEqual(loaded.images, images)
         self.assertEqual(loaded.correct_answers, correct_answers)
 
         # Cleanup for next iteration

@@ -39,6 +39,9 @@ htmlcov/
 # Database
 database/
 
+# Media (mounted at runtime)
+media/
+
 # Environment files
 .env
 .env.local

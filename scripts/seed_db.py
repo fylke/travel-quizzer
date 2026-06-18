@@ -114,7 +114,6 @@ def seed(destinations=None):
                     hint4_source=dest_data.get("hint4_source"),
                     hint5=dest_data["hint5"],
                     hint5_source=dest_data.get("hint5_source"),
-                    images=dest_data["images"],
                     correct_answers=dest_data["correct_answers"],
                 )
                 db.session.add(dest)

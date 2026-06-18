@@ -33,7 +33,6 @@ class DatabaseModelTestCase(unittest.TestCase):
                 hint3='Hint 3',
                 hint4='Hint 4',
                 hint5='Hint 5',
-                images=['https://example.com/1.png'],
                 correct_answers=['testopolis']
             )
             db.session.add(destination)
@@ -44,7 +43,6 @@ class DatabaseModelTestCase(unittest.TestCase):
             loaded = Destination.query.filter_by(name='Testopolis').first()
             self.assertIsNotNone(loaded)
             self.assertEqual(loaded.hint1, 'Hint 1')
-            self.assertEqual(loaded.images, ['https://example.com/1.png'])
             self.assertEqual(loaded.correct_answers, ['testopolis'])
 
     def test_quiz_result_links_user_and_destination(self):
@@ -57,7 +55,6 @@ class DatabaseModelTestCase(unittest.TestCase):
                 hint3='H3',
                 hint4='H4',
                 hint5='H5',
-                images=['https://example.com/2.png'],
                 correct_answers=['relationville']
             )
             db.session.add_all([user, destination])
@@ -92,7 +89,6 @@ class DatabaseModelTestCase(unittest.TestCase):
                 hint3='H3',
                 hint4='H4',
                 hint5='H5',
-                images=['https://example.com/3.png'],
                 correct_answers=['cascade city']
             )
             db.session.add_all([user, destination])

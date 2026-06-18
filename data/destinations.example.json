@@ -11,10 +11,6 @@
     "hint4_source": "https://example.com/another-source",
     "hint5": "Easiest hint (most obvious).",
     "hint5_source": "Common knowledge / no citation needed",
-    "images": [
-      "https://example.com/photo1.jpg",
-      "https://example.com/photo2.jpg"
-    ],
     "correct_answers": ["example city", "example"]
   }
 ]

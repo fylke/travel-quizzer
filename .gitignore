@@ -21,3 +21,6 @@ database/test_quiz_data.db
 
 # Seed data (quiz content lives outside the repo)
 data/destinations.json
+
+# Media files (quiz images live outside the repo)
+media/

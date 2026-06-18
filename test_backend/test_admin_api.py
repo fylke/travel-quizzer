@@ -81,7 +81,6 @@ class AdminAPITestCase(unittest.TestCase):
         return {
             "name": name,
             "hints": ["hint 1", "hint 2", "hint 3", "hint 4", "hint 5"],
-            "images": ["https://example.com/img1.jpg", "https://example.com/img2.jpg"],
             "correct_answers": ["test city", "Test City"]
         }
 
@@ -229,7 +228,6 @@ class AdminAPITestCase(unittest.TestCase):
         self.assertEqual(data['id'], dest_id)
         self.assertEqual(data['name'], "Test City")
         self.assertEqual(data['hints'], ["hint 1", "hint 2", "hint 3", "hint 4", "hint 5"])
-        self.assertEqual(data['images'], ["https://example.com/img1.jpg", "https://example.com/img2.jpg"])
         # Answers are normalized (lowercased + trimmed)
         self.assertEqual(data['correct_answers'], ["test city", "test city"])
 
@@ -324,7 +322,6 @@ class AdminAPITestCase(unittest.TestCase):
         updated_payload = {
             "name": "Updated City",
             "hints": ["new hint 1", "new hint 2", "new hint 3", "new hint 4", "new hint 5"],
-            "images": ["https://example.com/new1.jpg", "https://example.com/new2.jpg", "https://example.com/new3.jpg"],
             "correct_answers": ["updated city"]
         }
         response = self.client.put(f'/api/admin/destinations/{dest_id}',
@@ -335,7 +332,6 @@ class AdminAPITestCase(unittest.TestCase):
         self.assertEqual(data['id'], dest_id)
         self.assertEqual(data['name'], "Updated City")
         self.assertEqual(data['hints'], ["new hint 1", "new hint 2", "new hint 3", "new hint 4", "new hint 5"])
-        self.assertEqual(data['images'], ["https://example.com/new1.jpg", "https://example.com/new2.jpg", "https://example.com/new3.jpg"])
         self.assertEqual(data['correct_answers'], ["updated city"])
 
     def test_update_replaces_all_fields(self):
@@ -347,7 +343,6 @@ class AdminAPITestCase(unittest.TestCase):
         new_payload = {
             "name": "Completely New",
             "hints": ["a", "b", "c", "d", "e"],
-            "images": ["https://new.com/1.jpg", "https://new.com/2.jpg"],
             "correct_answers": ["completely new", "brand new"]
         }
         self.client.put(f'/api/admin/destinations/{dest_id}',
@@ -359,7 +354,6 @@ class AdminAPITestCase(unittest.TestCase):
         data = get_response.get_json()
         self.assertEqual(data['name'], "Completely New")
         self.assertEqual(data['hints'], ["a", "b", "c", "d", "e"])
-        self.assertEqual(data['images'], ["https://new.com/1.jpg", "https://new.com/2.jpg"])
         self.assertEqual(data['correct_answers'], ["completely new", "brand new"])
 
     def test_update_normalizes_answers(self):

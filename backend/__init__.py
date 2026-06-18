@@ -25,6 +25,9 @@ STATIC_DIR = os.path.join(PROJECT_ROOT, 'frontend')
 
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='/static')
 
+# Media directory for quiz images (convention: media/<dest_id>/<hint_level>a.jpg)
+MEDIA_DIR = os.environ.get('MEDIA_DIR', os.path.join(PROJECT_ROOT, 'media'))
+
 # Restrict CORS to the app's own origin in production; allow all in dev.
 _cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '*')
 CORS(app, origins=_cors_origins.split(','), supports_credentials=True)
@@ -318,7 +321,10 @@ def get_quiz():
         "hint": hint_text,
         "hintDifficulty": hint_difficulty,
         "remainingGuesses": 3,
-        "images": random_destination.images
+        "images": [
+            f"/media/{random_destination.id}/{hint_difficulty}a.jpg",
+            f"/media/{random_destination.id}/{hint_difficulty}b.jpg",
+        ]
     })
 
 
@@ -351,7 +357,10 @@ def get_specific_quiz(destination_id):
         "hint": hint_text,
         "hintDifficulty": hint_difficulty,
         "remainingGuesses": 3,
-        "images": destination.images
+        "images": [
+            f"/media/{destination.id}/{hint_difficulty}a.jpg",
+            f"/media/{destination.id}/{hint_difficulty}b.jpg",
+        ]
     })
 
 
@@ -465,7 +474,6 @@ def get_destination(destination_id):
             destination.hint4,
             destination.hint5,
         ],
-        "images": destination.images,
         "correct_answers": destination.correct_answers,
     })
 
@@ -497,7 +505,6 @@ def create_destination():
         hint3=hints[2],
         hint4=hints[3],
         hint5=hints[4],
-        images=data['images'],
         correct_answers=normalized,
     )
     db.session.add(destination)
@@ -544,7 +551,6 @@ def update_destination(destination_id):
     destination.hint3 = hints[2]
     destination.hint4 = hints[3]
     destination.hint5 = hints[4]
-    destination.images = data['images']
     destination.correct_answers = normalized
 
     db.session.commit()
@@ -559,7 +565,6 @@ def update_destination(destination_id):
             destination.hint4,
             destination.hint5,
         ],
-        "images": destination.images,
         "correct_answers": destination.correct_answers,
     })
 
@@ -568,6 +573,12 @@ def update_destination(destination_id):
 def index():
     """Serve the main page"""
     return send_from_directory(STATIC_DIR, 'index.html')
+
+
+@app.route('/media/<path:filename>')
+def serve_media(filename):
+    """Serve quiz images from the media directory."""
+    return send_from_directory(MEDIA_DIR, filename)
 
 
 if __name__ == '__main__':

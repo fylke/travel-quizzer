@@ -28,7 +28,6 @@ valid_hint_st = st.text(
     max_size=256,
 ).filter(lambda s: len(s.strip()) > 0)
 
-valid_image_url_st = st.from_regex(r'https://example\.com/[a-z0-9]{1,20}\.jpg', fullmatch=True)
 
 valid_answer_st = st.text(
     alphabet=st.characters(whitelist_categories=('L', 'N', 'P', 'Z')),
@@ -39,7 +38,6 @@ valid_answer_st = st.text(
 valid_destination_st = st.fixed_dictionaries({
     'name': valid_name_st,
     'hints': st.lists(valid_hint_st, min_size=5, max_size=5),
-    'images': st.lists(valid_image_url_st, min_size=2, max_size=10),
     'correct_answers': st.lists(valid_answer_st, min_size=1, max_size=20),
 })
 
@@ -135,7 +133,6 @@ class PropertyTestUpdateRoundTrip(unittest.TestCase):
 
         self.assertEqual(result['name'], update_data['name'])
         self.assertEqual(result['hints'], update_data['hints'])
-        self.assertEqual(result['images'], update_data['images'])
 
         # Answers should be normalized (lowercased + trimmed)
         expected_answers = [a.lower().strip() for a in update_data['correct_answers']]
@@ -175,15 +172,6 @@ class PropertyTestValidation(unittest.TestCase):
         is_valid, errors = validate_destination_payload(data)
         self.assertFalse(is_valid)
         self.assertTrue(any('hints' in e for e in errors))
-
-    @settings(max_examples=100, deadline=2000)
-    @given(data=valid_destination_st)
-    def test_too_few_images_fails(self, data):
-        """Having < 2 images should fail validation."""
-        data['images'] = data['images'][:1]
-        is_valid, errors = validate_destination_payload(data)
-        self.assertFalse(is_valid)
-        self.assertTrue(any('images' in e for e in errors))
 
 
 class PropertyTestNormalization(unittest.TestCase):
