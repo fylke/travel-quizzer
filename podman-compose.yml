@@ -8,7 +8,13 @@ services:
       - "9696:5000"
     volumes:
       - ./frontend:/app/frontend:ro
-    environment: []
+    environment:
+      QUIZ_DATABASE_URL: postgresql+psycopg2://quizzer:quizzer_pass@postgres:5432/travel_quizzer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - travel-quizzer-net
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/quiz"]
@@ -16,3 +22,27 @@ services:
       timeout: 10s
       retries: 3
       start_period: 5s
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: travel_quizzer
+      POSTGRES_USER: quizzer
+      POSTGRES_PASSWORD: quizzer_pass
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quizzer -d travel_quizzer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - travel-quizzer-net
+
+networks:
+  travel-quizzer-net:
+    driver: bridge
+
+volumes:
+  pgdata:

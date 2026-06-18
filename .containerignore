@@ -36,6 +36,9 @@ README.md
 .coverage
 htmlcov/
 
+# Database
+database/
+
 # Environment files
 .env
 .env.local

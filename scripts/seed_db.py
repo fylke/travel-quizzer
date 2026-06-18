@@ -13,6 +13,7 @@ import os
 # Ensure the project root is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from sqlalchemy.exc import OperationalError
 from werkzeug.security import generate_password_hash
 
 from backend import app
@@ -89,60 +90,66 @@ DESTINATIONS = [
 
 def seed():
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
 
-        # Seed admin user(s)
-        admin_accounts = [
-            ("admin@example.com", "adminpass123"),
-            ("admin@travel-quizzer.local", "admin123"),
-        ]
-        for admin_email, admin_password in admin_accounts:
-            admin = User.query.filter_by(email=admin_email).first()
-            if admin:
-                admin.password_hash = generate_password_hash(admin_password)
-                admin.is_admin = True
-                print(f"  Updated admin user: {admin_email} / {admin_password}")
-            else:
-                admin = User(
-                    name="Admin",
-                    email=admin_email,
-                    password_hash=generate_password_hash(admin_password),
-                    is_admin=True,
+            # Seed admin user(s)
+            admin_accounts = [
+                ("admin@example.com", "adminpass123"),
+                ("admin@travel-quizzer.local", "admin123"),
+            ]
+            for admin_email, admin_password in admin_accounts:
+                admin = User.query.filter_by(email=admin_email).first()
+                if admin:
+                    admin.password_hash = generate_password_hash(admin_password)
+                    admin.is_admin = True
+                    print(f"  Updated admin user: {admin_email} / {admin_password}")
+                else:
+                    admin = User(
+                        name="Admin",
+                        email=admin_email,
+                        password_hash=generate_password_hash(admin_password),
+                        is_admin=True,
+                    )
+                    db.session.add(admin)
+                    print(f"  Created admin user: {admin_email} / {admin_password}")
+
+            db.session.commit()
+
+            existing = Destination.query.count()
+            if existing > 0:
+                print(f"Database already has {existing} destination(s). Skipping seed.")
+                print("Use --force to seed anyway (existing data will be kept).")
+                if "--force" not in sys.argv:
+                    return
+
+            added = 0
+            for dest_data in DESTINATIONS:
+                # Skip if a destination with the same name already exists
+                if Destination.query.filter_by(name=dest_data["name"]).first():
+                    print(f"  Skipping '{dest_data['name']}' (already exists)")
+                    continue
+
+                dest = Destination(
+                    name=dest_data["name"],
+                    hint1=dest_data["hint1"],
+                    hint2=dest_data["hint2"],
+                    hint3=dest_data["hint3"],
+                    hint4=dest_data["hint4"],
+                    hint5=dest_data["hint5"],
+                    images=dest_data["images"],
+                    correct_answers=dest_data["correct_answers"],
                 )
-                db.session.add(admin)
-                print(f"  Created admin user: {admin_email} / {admin_password}")
+                db.session.add(dest)
+                added += 1
 
-        db.session.commit()
-
-        existing = Destination.query.count()
-        if existing > 0:
-            print(f"Database already has {existing} destination(s). Skipping seed.")
-            print("Use --force to seed anyway (existing data will be kept).")
-            if "--force" not in sys.argv:
-                return
-
-        added = 0
-        for dest_data in DESTINATIONS:
-            # Skip if a destination with the same name already exists
-            if Destination.query.filter_by(name=dest_data["name"]).first():
-                print(f"  Skipping '{dest_data['name']}' (already exists)")
-                continue
-
-            dest = Destination(
-                name=dest_data["name"],
-                hint1=dest_data["hint1"],
-                hint2=dest_data["hint2"],
-                hint3=dest_data["hint3"],
-                hint4=dest_data["hint4"],
-                hint5=dest_data["hint5"],
-                images=dest_data["images"],
-                correct_answers=dest_data["correct_answers"],
+            db.session.commit()
+            print(
+                f"Seeded {added} destination(s). Total now: {Destination.query.count()}"
             )
-            db.session.add(dest)
-            added += 1
-
-        db.session.commit()
-        print(f"Seeded {added} destination(s). Total now: {Destination.query.count()}")
+        except OperationalError as e:
+            print(f"ERROR: Seed script failed - {e}", file=sys.stderr)
+            sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,7 @@
 from functools import wraps
+import logging
 import secrets
+import sys
 
 from flask import Flask, jsonify, request, send_from_directory, session
 from flask_cors import CORS
@@ -8,6 +10,7 @@ from flask_limiter.util import get_remote_address
 import os
 import random
 import re
+import sqlalchemy.exc
 from werkzeug.security import check_password_hash, generate_password_hash
 from .models import db, Destination, QuizResult, User
 from .admin import validate_destination_payload, normalize_answers
@@ -63,23 +66,63 @@ def _disable_limiter_in_testing():
     return app.testing
 
 # Configure database (allow override via env var)
+logger = logging.getLogger(__name__)
+
+
+def resolve_database_uri(quiz_db_url=None, database_url=None, default_path=None):
+    """Resolve the database URI using the precedence chain.
+
+    Priority:
+      1. quiz_db_url (QUIZ_DATABASE_URL) if non-empty
+      2. database_url (DATABASE_URL) if non-empty
+      3. SQLite default at default_path
+
+    Returns the resolved URI string.
+    """
+    if default_path is None:
+        default_path = os.path.join(PROJECT_ROOT, "database", "quiz_data.db")
+    env_url = quiz_db_url or database_url
+    return env_url or f"sqlite:///{default_path}"
+
+
 default_db_path = os.path.join(PROJECT_ROOT, "database", "quiz_data.db")
-db_url = os.environ.get('QUIZ_DATABASE_URL') or os.environ.get('DATABASE_URL') or f"sqlite:///{default_db_path}"
+_env_db_url = os.environ.get('QUIZ_DATABASE_URL') or os.environ.get('DATABASE_URL')
+db_url = _env_db_url or f"sqlite:///{default_db_path}"
 
 if db_url.startswith("sqlite:///") and db_url != "sqlite:///:memory:":
     db_path = db_url.split("sqlite:///")[1]
     db_path = os.path.abspath(db_path)
     db_dir = os.path.dirname(db_path)
     if db_dir:
-        os.makedirs(db_dir, exist_ok=True)
+        if not os.path.isdir(db_dir):
+            if not _env_db_url:
+                # No env var set and database directory missing — container mode
+                logger.error(
+                    "no database configured: no QUIZ_DATABASE_URL or DATABASE_URL set "
+                    "and the database/ directory does not exist"
+                )
+                sys.exit(1)
+            # Env var pointed to a SQLite path whose directory doesn't exist; create it
+            os.makedirs(db_dir, exist_ok=True)
+        # Directory already exists — local development, nothing to do
     db_url = f"sqlite:///{db_path}"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+if db_url.startswith("postgresql"):
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'connect_args': {'connect_timeout': 5}
+    }
+
 db.init_app(app)
 
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+    except sqlalchemy.exc.OperationalError as e:
+        logger.error("Database connection failed: %s", e)
+        sys.exit(1)
 
 
 def _generate_csrf_token():
