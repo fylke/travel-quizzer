@@ -15,7 +15,7 @@ travel-quizzer/
 │   ├── style.css          # Styling
 │   └── script.js          # Frontend logic
 ├── database/
-│   └── quiz_data.db       # SQLite database
+│   └── .gitkeep           # Placeholder for the local SQLite database folder
 ├── test_backend/            # Backend unit tests
 ├── test_e2e/              # End-to-end Playwright tests
 ├── pyproject.toml         # Project configuration
@@ -23,6 +23,8 @@ travel-quizzer/
 ├── podman-compose.yml     # Podman Compose orchestration
 └── README.md              # This file
 ```
+
+The `database/` directory is kept in the repo as a placeholder for local SQLite files, but the actual `quiz_data.db` file is generated locally and ignored by git.
 
 ## Setup Instructions
 
