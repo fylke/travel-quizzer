@@ -97,25 +97,37 @@ def seed(destinations=None):
 
             added = 0
             for dest_data in destinations:
+                destination_id = dest_data.get("id")
+
+                if destination_id is not None:
+                    # Allow explicit IDs in seed JSON so media/<id>/ paths are stable.
+                    if Destination.query.filter_by(id=destination_id).first():
+                        print(f"  Skipping id={destination_id} '{dest_data['name']}' (id already exists)")
+                        continue
+
                 # Skip if a destination with the same name already exists
                 if Destination.query.filter_by(name=dest_data["name"]).first():
                     print(f"  Skipping '{dest_data['name']}' (already exists)")
                     continue
 
-                dest = Destination(
-                    name=dest_data["name"],
-                    hint1=dest_data["hint1"],
-                    hint1_source=dest_data.get("hint1_source"),
-                    hint2=dest_data["hint2"],
-                    hint2_source=dest_data.get("hint2_source"),
-                    hint3=dest_data["hint3"],
-                    hint3_source=dest_data.get("hint3_source"),
-                    hint4=dest_data["hint4"],
-                    hint4_source=dest_data.get("hint4_source"),
-                    hint5=dest_data["hint5"],
-                    hint5_source=dest_data.get("hint5_source"),
-                    correct_answers=dest_data["correct_answers"],
-                )
+                create_kwargs = {
+                    "name": dest_data["name"],
+                    "hint1": dest_data["hint1"],
+                    "hint1_source": dest_data.get("hint1_source"),
+                    "hint2": dest_data["hint2"],
+                    "hint2_source": dest_data.get("hint2_source"),
+                    "hint3": dest_data["hint3"],
+                    "hint3_source": dest_data.get("hint3_source"),
+                    "hint4": dest_data["hint4"],
+                    "hint4_source": dest_data.get("hint4_source"),
+                    "hint5": dest_data["hint5"],
+                    "hint5_source": dest_data.get("hint5_source"),
+                    "correct_answers": dest_data["correct_answers"],
+                }
+                if destination_id is not None:
+                    create_kwargs["id"] = int(destination_id)
+
+                dest = Destination(**create_kwargs)
                 db.session.add(dest)
                 added += 1
 

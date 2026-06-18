@@ -1,5 +1,6 @@
 [
   {
+    "id": 1,
     "name": "Example City",
     "hint1": "Hardest hint (shown first).",
     "hint1_source": "https://en.wikipedia.org/wiki/Example_City#Trivia",
