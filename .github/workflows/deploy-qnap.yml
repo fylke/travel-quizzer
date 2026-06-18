@@ -66,6 +66,8 @@ jobs:
               --restart unless-stopped \
               -p 9696:5000 \
               -v /share/Container/travel-quizzer/database:/app/database \
+              -v /share/Container/travel-quizzer/data:/app/data:ro \
+              -v /share/Container/travel-quizzer/media:/app/media:ro \
               -e SECRET_KEY="${{ secrets.FLASK_SECRET_KEY }}" \
               --health-cmd "curl -f http://localhost:5000/api/quiz || exit 1" \
               --health-interval 10s \
