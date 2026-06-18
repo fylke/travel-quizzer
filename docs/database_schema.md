@@ -1,6 +1,6 @@
 ```mermaid
 erDiagram
-    destination {
+    countries {
         number id PK
         varchar2 name
         varchar2 hint1
@@ -8,7 +8,6 @@ erDiagram
         varchar2 hint3
         varchar2 hint4
         varchar2 hint5
-        json images
         json correct_answers
     }
 
@@ -29,5 +28,5 @@ erDiagram
     }
 
     user ||--o{ quiz_result : "has"
-    destination ||--o{ quiz_result : "referenced by"
+    countries ||--o{ quiz_result : "referenced by"
 ```

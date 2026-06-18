@@ -20,7 +20,6 @@ SAMPLE_DATA = [
             "2": "It is home to a famous anime culture, sushi, and the Imperial Palace.",
             "1": "Its name starts with 'T' and it hosted the 2020 Summer Olympics."
         },
-        "images": ["https://picsum.photos/400/300?random=1", "https://picsum.photos/400/300?random=2"],
         "correct_answers": ["tokyo, japan"]
     },
     {
@@ -33,7 +32,6 @@ SAMPLE_DATA = [
             "2": "It hosts a famous iron tower and is often called the most romantic city in the world.",
             "1": "Its name starts with 'P' and it is known for the Eiffel Tower."
         },
-        "images": ["https://picsum.photos/400/300?random=3", "https://picsum.photos/400/300?random=4"],
         "correct_answers": ["paris, france"]
     },
     {
@@ -46,7 +44,6 @@ SAMPLE_DATA = [
             "2": "It is home to the boroughs of Manhattan, Brooklyn, and Queens.",
             "1": "Its name includes the word 'York' and it is one of America's largest cities."
         },
-        "images": ["https://picsum.photos/400/300?random=5", "https://picsum.photos/400/300?random=6"],
         "correct_answers": ["new york, usa", "new york city, usa"]
     }
     ,
@@ -60,7 +57,6 @@ SAMPLE_DATA = [
             "2": "It is one of Australia's largest cities and is not the capital of the country.",
             "1": "Its name starts with 'S' and it is famous for the Opera House."
         },
-        "images": ["https://picsum.photos/400/300?random=7", "https://picsum.photos/400/300?random=8"],
         "correct_answers": ["sydney, australia"]
     },
     {
@@ -73,7 +69,6 @@ SAMPLE_DATA = [
             "2": "It is built on seven hills and includes the Vatican City within its boundaries.",
             "1": "Its name starts with 'R' and it is famous for the Colosseum."
         },
-        "images": ["https://picsum.photos/400/300?random=9", "https://picsum.photos/400/300?random=10"],
         "correct_answers": ["rome, italy"]
     }
 ]
@@ -107,7 +102,6 @@ class MainAppTestCase(unittest.TestCase):
                     hint3=item['hints']['3'],
                     hint4=item['hints']['4'],
                     hint5=item['hints']['5'],
-                    images=item['images'],
                     correct_answers=item['correct_answers']
                 )
                 db.session.add(q)

@@ -41,23 +41,6 @@ def validate_destination_payload(data: dict) -> tuple[bool, list[str]]:
             elif len(hint.strip()) > 256:
                 errors.append(f"hints[{i}]: must be between 1 and 256 characters")
 
-    # --- images validation ---
-    images = data.get("images")
-    if images is None:
-        errors.append("images: field is required")
-    elif not isinstance(images, list):
-        errors.append("images: must be a list")
-    elif len(images) < 2 or len(images) > 10:
-        errors.append("images: must contain between 2 and 10 items")
-    else:
-        for i, url in enumerate(images):
-            if not isinstance(url, str):
-                errors.append(f"images[{i}]: must be a string")
-            elif not (url.startswith("http://") or url.startswith("https://")):
-                errors.append(
-                    f"images[{i}]: must start with 'http://' or 'https://'"
-                )
-
     # --- correct_answers validation ---
     correct_answers = data.get("correct_answers")
     if correct_answers is None:

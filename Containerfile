@@ -16,7 +16,6 @@ RUN uv sync --frozen --no-dev --no-install-project
 # Copy application code and static files
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
-COPY database/ ./database/
 COPY scripts/ ./scripts/
 
 # Expose port 5000

@@ -6,19 +6,23 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 class Destination(db.Model):
-    __tablename__ = 'destination'
+    __tablename__ = 'countries'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
     hint1 = db.Column(db.String(256), nullable=False)
+    hint1_source = db.Column(db.String(512), nullable=True)
     hint2 = db.Column(db.String(256), nullable=False)
+    hint2_source = db.Column(db.String(512), nullable=True)
     hint3 = db.Column(db.String(256), nullable=False)
+    hint3_source = db.Column(db.String(512), nullable=True)
     hint4 = db.Column(db.String(256), nullable=False)
+    hint4_source = db.Column(db.String(512), nullable=True)
     hint5 = db.Column(db.String(256), nullable=False)
-    images = db.Column(db.JSON, nullable=False)
+    hint5_source = db.Column(db.String(512), nullable=True)
     correct_answers = db.Column(db.JSON, nullable=False)
 
-    results = db.relationship('QuizResult', back_populates='destination', cascade='all, delete-orphan')
+    results = db.relationship('QuizResult', back_populates='country', cascade='all, delete-orphan')
 
 class User(db.Model):
     __tablename__ = 'user'
@@ -35,10 +39,10 @@ class QuizResult(db.Model):
     __tablename__ = 'quiz_result'
 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
-    destination_id = db.Column(db.Integer, db.ForeignKey('destination.id'), primary_key=True)
+    destination_id = db.Column(db.Integer, db.ForeignKey('countries.id'), primary_key=True)
     hint_difficulty = db.Column(db.Integer, nullable=False, default=5)
     remaining_guesses = db.Column(db.Integer, nullable=False, default=3)
     ongoing = db.Column(db.Boolean, nullable=False, default=True)
 
     user = db.relationship('User', back_populates='results')
-    destination = db.relationship('Destination', back_populates='results')
+    country = db.relationship('Destination', back_populates='results')

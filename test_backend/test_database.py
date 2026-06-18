@@ -33,7 +33,6 @@ class DatabaseModelTestCase(unittest.TestCase):
                 hint3='Hint 3',
                 hint4='Hint 4',
                 hint5='Hint 5',
-                images=['https://example.com/1.png'],
                 correct_answers=['testopolis']
             )
             db.session.add(destination)
@@ -44,7 +43,6 @@ class DatabaseModelTestCase(unittest.TestCase):
             loaded = Destination.query.filter_by(name='Testopolis').first()
             self.assertIsNotNone(loaded)
             self.assertEqual(loaded.hint1, 'Hint 1')
-            self.assertEqual(loaded.images, ['https://example.com/1.png'])
             self.assertEqual(loaded.correct_answers, ['testopolis'])
 
     def test_quiz_result_links_user_and_destination(self):
@@ -57,7 +55,6 @@ class DatabaseModelTestCase(unittest.TestCase):
                 hint3='H3',
                 hint4='H4',
                 hint5='H5',
-                images=['https://example.com/2.png'],
                 correct_answers=['relationville']
             )
             db.session.add_all([user, destination])
@@ -76,10 +73,10 @@ class DatabaseModelTestCase(unittest.TestCase):
             loaded_result = QuizResult.query.first()
             self.assertIsNotNone(loaded_result)
             self.assertEqual(loaded_result.user.id, user.id)
-            self.assertEqual(loaded_result.destination.id, destination.id)
+            self.assertEqual(loaded_result.country.id, destination.id)
             self.assertEqual(loaded_result.user.name, 'Quiz User')
-            self.assertEqual(loaded_result.destination.name, 'Relationville')
-            self.assertEqual(user.results[0].destination.name, 'Relationville')
+            self.assertEqual(loaded_result.country.name, 'Relationville')
+            self.assertEqual(user.results[0].country.name, 'Relationville')
             self.assertEqual(destination.results[0].user.email, 'quiz@user.test')
 
     def test_quiz_result_is_removed_when_user_is_deleted(self):
@@ -92,7 +89,6 @@ class DatabaseModelTestCase(unittest.TestCase):
                 hint3='H3',
                 hint4='H4',
                 hint5='H5',
-                images=['https://example.com/3.png'],
                 correct_answers=['cascade city']
             )
             db.session.add_all([user, destination])
@@ -100,7 +96,7 @@ class DatabaseModelTestCase(unittest.TestCase):
 
             quiz_result = QuizResult(
                 user=user,
-                destination=destination,
+                country=destination,
                 hint_difficulty=5,
                 remaining_guesses=1,
                 ongoing=False

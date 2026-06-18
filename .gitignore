@@ -18,3 +18,11 @@ dist/
 database/quiz_data.db
 database/ci_quiz_data.db
 database/test_quiz_data.db
+
+# Seed data (quiz content lives outside the repo)
+countries.json
+data/countries.json
+data/destinations.json
+
+# Media files (quiz images live outside the repo)
+media/
