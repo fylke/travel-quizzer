@@ -1,12 +1,16 @@
-"""Seed the database with sample travel destinations.
+"""Seed the database with travel destinations from an external JSON file.
 
 Usage:
     uv run python -m scripts.seed_db
 
 Or inside the container:
     podman exec travel-quizzer uv run --no-project python -m scripts.seed_db
+
+The seed data is loaded from data/destinations.json (gitignored).
+See data/destinations.example.json for the expected format.
 """
 
+import json
 import sys
 import os
 
@@ -19,76 +23,33 @@ from werkzeug.security import generate_password_hash
 from backend import app
 from backend.models import db, Destination, User
 
-DESTINATIONS = [
-    {
-        "name": "Paris",
-        "hint1": "This city hosts the world's most visited museum.",
-        "hint2": "A famous iron tower was built here for a world's fair in 1889.",
-        "hint3": "It's known as the City of Light.",
-        "hint4": "The Seine river flows through it.",
-        "hint5": "It is the capital of France.",
-        "images": [
-            "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600",
-            "https://images.unsplash.com/photo-1549144511-f099e773c147?w=600",
-        ],
-        "correct_answers": ["paris", "paris france", "paris, france"],
-    },
-    {
-        "name": "Tokyo",
-        "hint1": "This city has the busiest pedestrian crossing in the world.",
-        "hint2": "It hosted the Summer Olympics in 2020 (held 2021).",
-        "hint3": "Famous for its cherry blossoms in spring.",
-        "hint4": "Home to the Shibuya and Shinjuku districts.",
-        "hint5": "It is the capital of Japan.",
-        "images": [
-            "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600",
-            "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=600",
-        ],
-        "correct_answers": ["tokyo", "tokyo japan", "tokyo, japan"],
-    },
-    {
-        "name": "New York City",
-        "hint1": "This city's subway system has 472 stations.",
-        "hint2": "A famous green statue greets visitors arriving by sea.",
-        "hint3": "Known as the city that never sleeps.",
-        "hint4": "Home to a large park in the middle of Manhattan.",
-        "hint5": "Often called the Big Apple.",
-        "images": [
-            "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=600",
-            "https://images.unsplash.com/photo-1534430480872-3498386e7856?w=600",
-        ],
-        "correct_answers": ["new york", "new york city", "nyc"],
-    },
-    {
-        "name": "Rome",
-        "hint1": "This city contains an independent country within its borders.",
-        "hint2": "An ancient amphitheater that held 50,000 spectators still stands here.",
-        "hint3": "Legend says throwing a coin in a fountain guarantees your return.",
-        "hint4": "Known as the Eternal City.",
-        "hint5": "It is the capital of Italy.",
-        "images": [
-            "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=600",
-            "https://images.unsplash.com/photo-1529260830199-42c24126f198?w=600",
-        ],
-        "correct_answers": ["rome", "roma", "rome italy", "rome, italy"],
-    },
-    {
-        "name": "Sydney",
-        "hint1": "This city's harbour bridge is nicknamed 'the Coathanger'.",
-        "hint2": "Home to a world-famous opera house with sail-shaped roofs.",
-        "hint3": "Its most popular beach shares its name with a famous lifeguard TV show.",
-        "hint4": "Located on Australia's east coast.",
-        "hint5": "The largest city in Australia (but not the capital).",
-        "images": [
-            "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=600",
-            "https://images.unsplash.com/photo-1524293581917-878a6d017c71?w=600",
-        ],
-        "correct_answers": ["sydney", "sydney australia", "sydney, australia"],
-    },
-]
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_SEED_FILE = os.path.join(PROJECT_ROOT, "data", "destinations.json")
 
 
-def seed():
+def _load_destinations(path=None):
+    """Load destination data from a JSON file.
+
+    Args:
+        path: Path to the JSON file. Defaults to data/destinations.json.
+
+    Returns:
+        List of destination dicts, or None if file not found.
+    """
+    seed_path = path or os.environ.get("SEED_DATA_PATH") or DEFAULT_SEED_FILE
+    if not os.path.isfile(seed_path):
+        return None
+    with open(seed_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def seed(destinations=None):
+    """Seed the database with destinations and admin users.
+
+    Args:
+        destinations: Optional list of destination dicts. If None, loads from
+                      data/destinations.json (or SEED_DATA_PATH env var).
+    """
     with app.app_context():
         try:
             db.create_all()
@@ -123,8 +84,19 @@ def seed():
                 if "--force" not in sys.argv:
                     return
 
+            # Load destinations from file if not passed directly
+            if destinations is None:
+                destinations = _load_destinations()
+            if not destinations:
+                print(
+                    "WARNING: No seed data found. Place destination data in "
+                    "data/destinations.json or set SEED_DATA_PATH.",
+                    file=sys.stderr,
+                )
+                return
+
             added = 0
-            for dest_data in DESTINATIONS:
+            for dest_data in destinations:
                 # Skip if a destination with the same name already exists
                 if Destination.query.filter_by(name=dest_data["name"]).first():
                     print(f"  Skipping '{dest_data['name']}' (already exists)")

@@ -1,8 +1,7 @@
-"""Unit tests for seed script idempotency.
+"""Unit tests for seed script.
 
 Validates:
 - Requirements 7.1: Empty DB gets seeded with at least 5 destinations and 1 admin user
-- Requirements 7.2: Existing destinations are not modified by re-running seed
 - Requirements 7.3: Same seed data produced regardless of backend (tested with SQLite)
 """
 
@@ -14,6 +13,21 @@ os.environ["QUIZ_DATABASE_URL"] = "sqlite:///:memory:"
 
 from backend import app
 from backend.models import db, Destination, User  # noqa: F401 - User used in seed
+
+# Test fixture — minimal destination data for unit tests
+TEST_DESTINATIONS = [
+    {
+        "name": f"Test City {i}",
+        "hint1": f"Hint 1 for city {i}",
+        "hint2": f"Hint 2 for city {i}",
+        "hint3": f"Hint 3 for city {i}",
+        "hint4": f"Hint 4 for city {i}",
+        "hint5": f"Hint 5 for city {i}",
+        "images": [f"https://example.com/city{i}.jpg"],
+        "correct_answers": [f"test city {i}"],
+    }
+    for i in range(1, 6)
+]
 
 
 class TestSeedEmptyDatabase(unittest.TestCase):
@@ -37,7 +51,7 @@ class TestSeedEmptyDatabase(unittest.TestCase):
         """Requirement 7.1: seed inserts at least 5 destinations when table is empty."""
         from scripts.seed_db import seed
 
-        seed()
+        seed(destinations=TEST_DESTINATIONS)
 
         with app.app_context():
             count = Destination.query.count()
@@ -47,7 +61,7 @@ class TestSeedEmptyDatabase(unittest.TestCase):
         """Requirement 7.1: seed inserts at least 1 admin user when table is empty."""
         from scripts.seed_db import seed
 
-        seed()
+        seed(destinations=TEST_DESTINATIONS)
 
         with app.app_context():
             admin_count = User.query.filter_by(is_admin=True).count()
@@ -57,7 +71,7 @@ class TestSeedEmptyDatabase(unittest.TestCase):
         """Requirement 7.1: each destination has all required fields populated."""
         from scripts.seed_db import seed
 
-        seed()
+        seed(destinations=TEST_DESTINATIONS)
 
         with app.app_context():
             destinations = Destination.query.all()

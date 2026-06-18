@@ -1,0 +1,15 @@
+[
+  {
+    "name": "Example City",
+    "hint1": "Hardest hint (shown first).",
+    "hint2": "Second hardest hint.",
+    "hint3": "Medium hint.",
+    "hint4": "Easier hint.",
+    "hint5": "Easiest hint (most obvious).",
+    "images": [
+      "https://example.com/photo1.jpg",
+      "https://example.com/photo2.jpg"
+    ],
+    "correct_answers": ["example city", "example"]
+  }
+]

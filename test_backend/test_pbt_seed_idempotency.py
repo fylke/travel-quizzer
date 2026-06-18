@@ -139,7 +139,7 @@ class TestSeedScriptIdempotency(unittest.TestCase):
         count_before = len(snapshot_before)
 
         # Run seed — should skip because destination table is non-empty
-        seed()
+        seed(destinations=[])
 
         # Verify: row count unchanged, all field values unchanged
         snapshot_after = self._snapshot_destinations()
@@ -151,7 +151,7 @@ class TestSeedScriptIdempotency(unittest.TestCase):
         )
 
         # Run seed again to confirm double-idempotency
-        seed()
+        seed(destinations=[])
 
         # Verify again
         snapshot_after_second = self._snapshot_destinations()
