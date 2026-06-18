@@ -322,8 +322,8 @@ def get_quiz():
         "hintDifficulty": hint_difficulty,
         "remainingGuesses": 3,
         "images": [
-            f"/media/{random_destination.id}/{hint_difficulty}a.jpg",
-            f"/media/{random_destination.id}/{hint_difficulty}b.jpg",
+            f"/media/countries/{random_destination.id}/{hint_difficulty}a.jpg",
+            f"/media/countries/{random_destination.id}/{hint_difficulty}b.jpg",
         ]
     })
 
@@ -358,8 +358,8 @@ def get_specific_quiz(destination_id):
         "hintDifficulty": hint_difficulty,
         "remainingGuesses": 3,
         "images": [
-            f"/media/{destination.id}/{hint_difficulty}a.jpg",
-            f"/media/{destination.id}/{hint_difficulty}b.jpg",
+            f"/media/countries/{destination.id}/{hint_difficulty}a.jpg",
+            f"/media/countries/{destination.id}/{hint_difficulty}b.jpg",
         ]
     })
 

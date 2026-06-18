@@ -25,8 +25,8 @@ sequenceDiagram
         Backend->>Frontend: (404, {error: "No more hints remaining"})
         Frontend->>User: Remain on quiz screen and display message<br/>"No more hints remaining, you might as well guess now!"
     else hint available
-        Backend->>Database: SELECT destination WHERE id = :destination_id
-        Database->>Backend: Destination(hint1..hint5)
+        Backend->>Database: SELECT countries WHERE id = :destination_id
+        Database->>Backend: Country(hint1..hint5)
         Backend->>Database: UPDATE quiz_result SET hint_difficulty = hint_difficulty - 1
         Database->>Backend: OK
         Backend->>Frontend: (200, {hint: "The city is known for its iconic opera house.",<br/>hintDifficulty: 2, remainingGuesses: 2})

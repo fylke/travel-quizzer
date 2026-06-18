@@ -6,7 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 class Destination(db.Model):
-    __tablename__ = 'destination'
+    __tablename__ = 'countries'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
@@ -39,7 +39,7 @@ class QuizResult(db.Model):
     __tablename__ = 'quiz_result'
 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
-    destination_id = db.Column(db.Integer, db.ForeignKey('destination.id'), primary_key=True)
+    destination_id = db.Column(db.Integer, db.ForeignKey('countries.id'), primary_key=True)
     hint_difficulty = db.Column(db.Integer, nullable=False, default=5)
     remaining_guesses = db.Column(db.Integer, nullable=False, default=3)
     ongoing = db.Column(db.Boolean, nullable=False, default=True)

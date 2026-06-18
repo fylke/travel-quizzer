@@ -17,8 +17,8 @@ sequenceDiagram
         Backend->>Frontend: (404, {error: "No active quiz"})
         Frontend->>User: Display error message
     else active quiz found
-        Backend->>Database: SELECT destination WHERE id = :destination_id
-        Database->>Backend: Destination(name, correct_answers, hint1..hint5)
+        Backend->>Database: SELECT countries WHERE id = :destination_id
+        Database->>Backend: Country(name, correct_answers, hint1..hint5)
 
         alt Correct answer (user_answer in correct_answers)
             Note over Backend: points = hint_difficulty × remaining_guesses

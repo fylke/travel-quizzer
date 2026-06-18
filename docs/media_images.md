@@ -5,24 +5,25 @@ Quiz images are stored locally in the `media/` directory (gitignored). The app s
 ## Naming Convention
 
 ```
-media/<destination_id>/<hint_level>a.jpg
-media/<destination_id>/<hint_level>b.jpg
+media/<table>/<id>/<hint_level>a.jpg
+media/<table>/<id>/<hint_level>b.jpg
 ```
 
-Each destination has two images per hint level. For example, destination 3 at hint level 5:
+Each entry has two images per hint level. For example, country with ID 3 at hint level 5:
 
 ```
-media/3/5a.jpg
-media/3/5b.jpg
+media/countries/3/5a.jpg
+media/countries/3/5b.jpg
 ```
 
-The API returns these paths automatically based on the destination ID and current hint difficulty.
+The API returns these paths automatically based on the quiz type, destination ID, and current hint difficulty.
 
 ## Setup
 
 1. Create the `media/` directory at the project root
-2. For each destination, create a subdirectory named by its database ID
-3. Place images using the naming convention above
+2. Inside `media/`, create a subdirectory per quiz type (e.g. `countries/`)
+3. Inside each quiz-type directory, create subdirectories named by database ID
+4. Place images using the naming convention above
 
 ## Container Deployment
 

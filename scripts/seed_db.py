@@ -6,8 +6,8 @@ Usage:
 Or inside the container:
     podman exec travel-quizzer uv run --no-project python -m scripts.seed_db
 
-The seed data is loaded from data/destinations.json (gitignored).
-See data/destinations.example.json for the expected format.
+The seed data is loaded from data/countries.json (gitignored).
+See data/countries.example.json for the expected format.
 """
 
 import json
@@ -24,19 +24,22 @@ from backend import app
 from backend.models import db, Destination, User
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_SEED_FILE = os.path.join(PROJECT_ROOT, "data", "destinations.json")
+DEFAULT_SEED_FILE = os.path.join(PROJECT_ROOT, "data", "countries.json")
+LEGACY_SEED_FILE = os.path.join(PROJECT_ROOT, "data", "destinations.json")
 
 
 def _load_destinations(path=None):
     """Load destination data from a JSON file.
 
     Args:
-        path: Path to the JSON file. Defaults to data/destinations.json.
+        path: Path to the JSON file. Defaults to data/countries.json.
 
     Returns:
         List of destination dicts, or None if file not found.
     """
     seed_path = path or os.environ.get("SEED_DATA_PATH") or DEFAULT_SEED_FILE
+    if not os.path.isfile(seed_path) and seed_path == DEFAULT_SEED_FILE and os.path.isfile(LEGACY_SEED_FILE):
+        seed_path = LEGACY_SEED_FILE
     if not os.path.isfile(seed_path):
         return None
     with open(seed_path, "r", encoding="utf-8") as f:
@@ -48,7 +51,7 @@ def seed(destinations=None):
 
     Args:
         destinations: Optional list of destination dicts. If None, loads from
-                      data/destinations.json (or SEED_DATA_PATH env var).
+                      data/countries.json (or SEED_DATA_PATH env var).
     """
     with app.app_context():
         try:
@@ -90,7 +93,7 @@ def seed(destinations=None):
             if not destinations:
                 print(
                     "WARNING: No seed data found. Place destination data in "
-                    "data/destinations.json or set SEED_DATA_PATH.",
+                    "data/countries.json or set SEED_DATA_PATH.",
                     file=sys.stderr,
                 )
                 return
