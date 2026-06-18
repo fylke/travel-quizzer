@@ -22,7 +22,7 @@ class Destination(db.Model):
     hint5_source = db.Column(db.String(512), nullable=True)
     correct_answers = db.Column(db.JSON, nullable=False)
 
-    results = db.relationship('QuizResult', back_populates='destination', cascade='all, delete-orphan')
+    results = db.relationship('QuizResult', back_populates='country', cascade='all, delete-orphan')
 
 class User(db.Model):
     __tablename__ = 'user'
@@ -45,4 +45,4 @@ class QuizResult(db.Model):
     ongoing = db.Column(db.Boolean, nullable=False, default=True)
 
     user = db.relationship('User', back_populates='results')
-    destination = db.relationship('Destination', back_populates='results')
+    country = db.relationship('Destination', back_populates='results')

@@ -73,10 +73,10 @@ class DatabaseModelTestCase(unittest.TestCase):
             loaded_result = QuizResult.query.first()
             self.assertIsNotNone(loaded_result)
             self.assertEqual(loaded_result.user.id, user.id)
-            self.assertEqual(loaded_result.destination.id, destination.id)
+            self.assertEqual(loaded_result.country.id, destination.id)
             self.assertEqual(loaded_result.user.name, 'Quiz User')
-            self.assertEqual(loaded_result.destination.name, 'Relationville')
-            self.assertEqual(user.results[0].destination.name, 'Relationville')
+            self.assertEqual(loaded_result.country.name, 'Relationville')
+            self.assertEqual(user.results[0].country.name, 'Relationville')
             self.assertEqual(destination.results[0].user.email, 'quiz@user.test')
 
     def test_quiz_result_is_removed_when_user_is_deleted(self):
@@ -96,7 +96,7 @@ class DatabaseModelTestCase(unittest.TestCase):
 
             quiz_result = QuizResult(
                 user=user,
-                destination=destination,
+                country=destination,
                 hint_difficulty=5,
                 remaining_guesses=1,
                 ongoing=False
