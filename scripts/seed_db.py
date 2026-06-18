@@ -105,10 +105,15 @@ def seed(destinations=None):
                 dest = Destination(
                     name=dest_data["name"],
                     hint1=dest_data["hint1"],
+                    hint1_source=dest_data.get("hint1_source"),
                     hint2=dest_data["hint2"],
+                    hint2_source=dest_data.get("hint2_source"),
                     hint3=dest_data["hint3"],
+                    hint3_source=dest_data.get("hint3_source"),
                     hint4=dest_data["hint4"],
+                    hint4_source=dest_data.get("hint4_source"),
                     hint5=dest_data["hint5"],
+                    hint5_source=dest_data.get("hint5_source"),
                     images=dest_data["images"],
                     correct_answers=dest_data["correct_answers"],
                 )
