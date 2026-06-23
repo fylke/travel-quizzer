@@ -88,11 +88,11 @@ jobs:
               -v /share/Container/travel-quizzer/data:/app/data:ro \
               -v /share/Container/travel-quizzer/media:/app/media:ro \
               -e SECRET_KEY="${{ secrets.FLASK_SECRET_KEY }}" \
-              --health-cmd "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=3)\"" \
+              --health-cmd "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=3)\"" \
               --health-interval 10s \
               --health-timeout 5s \
-              --health-retries 5 \
-              --health-start-period 10s \
+              --health-retries 8 \
+              --health-start-period 20s \
               ${{ env.IMAGE_NAME }}:latest
 
             # Wait for container to become healthy
@@ -107,6 +107,10 @@ jobs:
               if [ "$STATUS" = "unhealthy" ]; then
                 echo "Container is unhealthy. Fetching logs..."
                 "$DOCKER_BIN" logs --tail 30 ${{ env.CONTAINER_NAME }}
+                echo "Healthcheck probe output:"
+                "$DOCKER_BIN" inspect --format='{{range .State.Health.Log}}{{println .ExitCode "|" .Output}}{{end}}' ${{ env.CONTAINER_NAME }} || true
+                echo "Manual health probe from inside container:"
+                "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health', timeout=5).read().decode('utf-8'))" || true
                 exit 1
               fi
               sleep 10
@@ -117,6 +121,10 @@ jobs:
             if [ "$STATUS" != "healthy" ]; then
               echo "Container did not become healthy within timeout."
               "$DOCKER_BIN" logs --tail 30 ${{ env.CONTAINER_NAME }}
+              echo "Healthcheck probe output:"
+              "$DOCKER_BIN" inspect --format='{{range .State.Health.Log}}{{println .ExitCode "|" .Output}}{{end}}' ${{ env.CONTAINER_NAME }} || true
+              echo "Manual health probe from inside container:"
+              "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health', timeout=5).read().decode('utf-8'))" || true
               exit 1
             fi
 
@@ -176,7 +184,7 @@ jobs:
             DOCKER_BIN=$(resolve_docker)
 
             # Confirm the API responds with quiz data
-            RESPONSE=$("$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python -c "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/api/quiz', timeout=5).read().decode('utf-8'))")
+            RESPONSE=$("$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/api/quiz', timeout=5).read().decode('utf-8'))")
             if [ -z "$RESPONSE" ]; then
               echo "API returned empty response after seeding."
               exit 1
