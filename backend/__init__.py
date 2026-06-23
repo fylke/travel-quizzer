@@ -19,6 +19,13 @@ from .stats import compute_stats
 # Basic email format check — intentionally lenient but catches obvious junk
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
+_FUNNY_NAMES = (
+    open(os.path.join(os.path.dirname(__file__), "assets", "names.txt"))
+    .read()
+    .splitlines()
+)
+_FUNNY_NAMES = [n for n in _FUNNY_NAMES if n.strip()]
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 STATIC_DIR = os.path.join(PROJECT_ROOT, 'frontend')
@@ -200,8 +207,11 @@ def register():
     email = (data.get('email') or '').strip().lower()
     password = (data.get('password') or '').strip()
 
-    if not name or not email or not password:
-        return jsonify({"error": "Name, email, and password are required"}), 400
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    if not name:
+        name = random.choice(_FUNNY_NAMES)
 
     if not _EMAIL_RE.match(email):
         return jsonify({"error": "Invalid email format"}), 400
