@@ -531,6 +531,10 @@ async function showDestinationForm(id) {
                 document.getElementById(`adminHint${i + 1}`).value = dest.hints[i] || '';
             }
             (dest.images || []).forEach(url => addImageField(url));
+            if (!dest.images || dest.images.length === 0) {
+                addImageField('');
+                addImageField('');
+            }
             dest.correct_answers.forEach(ans => addAnswerField(ans));
         } catch (error) {
             console.error('Error loading destination:', error);
@@ -591,8 +595,8 @@ async function saveDestination() {
             return;
         }
     }
-    if (images.length < 2 || images.length > 10) {
-        showAdminError('Between 2 and 10 image URLs are required');
+    if (images.length > 10) {
+        showAdminError('No more than 10 image URLs are allowed');
         return;
     }
     if (correct_answers.length < 1 || correct_answers.length > 20) {
