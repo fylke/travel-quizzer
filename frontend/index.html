@@ -11,13 +11,13 @@
         <div id="welcomeScreen" class="screen">
             <div class="welcome-content">
                 <h1 id="authHeading">✈️ Travel Quiz</h1>
-                <p id="authSubtext">Log in or create an account to continue.</p>
+                <p id="authSubtext">Log in to continue.</p>
                 
                 <div class="input-group auth-group">
                     <input 
                         type="text" 
                         id="name" 
-                        placeholder="Enter your name" 
+                        placeholder="Skip at your peril!" 
                         maxlength="20"
                         class="hidden"
                     >
@@ -47,10 +47,8 @@
                     <p class="auth-error" id="authError" style="display: none;"></p>
                 </div>
 
-                <div class="button-group auth-toggle-group">
-                    <button onclick="toggleAuthMode('register')" class="btn btn-secondary" id="switchToRegister">Create an account</button>
-                    <button onclick="toggleAuthMode('login')" class="btn btn-secondary hidden" id="switchToLogin">Already have an account?</button>
-                </div>
+                <p id="switchToRegister" class="auth-toggle-link">Don't have an account? <a href="#" onclick="toggleAuthMode('register'); return false;">Register now.</a></p>
+                <p id="switchToLogin" class="auth-toggle-link hidden">Already have an account? <a href="#" onclick="toggleAuthMode('login'); return false;">Log in.</a></p>
 
                 <div id="loadingMessage" class="loading-message" style="display: none;">
                     Loading quiz...

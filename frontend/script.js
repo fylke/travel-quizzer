@@ -150,7 +150,7 @@ async function handleAuth() {
     // Mark email as touched so validation styles apply
     document.getElementById('email').classList.add('touched');
 
-    if (!email || !password || (authMode === 'register' && !name)) {
+    if (!email || !password) {
         showAuthError('Please fill in all required fields.');
         return;
     }
