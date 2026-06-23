@@ -88,7 +88,7 @@ jobs:
               -v /share/Container/travel-quizzer/data:/app/data:ro \
               -v /share/Container/travel-quizzer/media:/app/media:ro \
               -e SECRET_KEY="${{ secrets.FLASK_SECRET_KEY }}" \
-              --health-cmd "curl -f http://localhost:5000/health || exit 1" \
+              --health-cmd "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=3)\"" \
               --health-interval 10s \
               --health-timeout 5s \
               --health-retries 5 \
@@ -176,7 +176,7 @@ jobs:
             DOCKER_BIN=$(resolve_docker)
 
             # Confirm the API responds with quiz data
-            RESPONSE=$("$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} curl -sf http://localhost:5000/api/quiz)
+            RESPONSE=$("$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python -c "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/api/quiz', timeout=5).read().decode('utf-8'))")
             if [ -z "$RESPONSE" ]; then
               echo "API returned empty response after seeding."
               exit 1
