@@ -530,7 +530,7 @@ async function showDestinationForm(id) {
             for (let i = 0; i < 5; i++) {
                 document.getElementById(`adminHint${i + 1}`).value = dest.hints[i] || '';
             }
-            dest.images.forEach(url => addImageField(url));
+            (dest.images || []).forEach(url => addImageField(url));
             dest.correct_answers.forEach(ans => addAnswerField(ans));
         } catch (error) {
             console.error('Error loading destination:', error);
