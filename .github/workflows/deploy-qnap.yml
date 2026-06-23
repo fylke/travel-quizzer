@@ -2,8 +2,8 @@ name: Deploy to QNAP Container Station
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    tags:
+      - 'v*'
 
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
@@ -50,18 +50,37 @@ jobs:
           username: ${{ secrets.QNAP_USER }}
           key: ${{ secrets.QNAP_SSH_KEY }}
           script: |
+            resolve_docker() {
+              if command -v docker >/dev/null 2>&1; then
+                command -v docker
+                return 0
+              fi
+              for candidate in \
+                /share/CACHEDEV2_DATA/.qpkg/container-station/bin/docker \
+                /share/CACHEDEV2_DATA/.qpkg/ContainerStation/bin/docker; do
+                if [ -x "$candidate" ]; then
+                  echo "$candidate"
+                  return 0
+                fi
+              done
+              echo "Docker CLI not found on QNAP host" >&2
+              return 1
+            }
+
+            DOCKER_BIN=$(resolve_docker)
+
             # Log in to GHCR
-            echo "${{ secrets.QNAP_GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "${{ secrets.QNAP_GHCR_TOKEN }}" | "$DOCKER_BIN" login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Pull the latest image
-            docker pull ${{ env.IMAGE_NAME }}:latest
+            "$DOCKER_BIN" pull ${{ env.IMAGE_NAME }}:latest
 
             # Stop and remove existing container (if running)
-            docker stop ${{ env.CONTAINER_NAME }} 2>/dev/null || true
-            docker rm ${{ env.CONTAINER_NAME }} 2>/dev/null || true
+            "$DOCKER_BIN" stop ${{ env.CONTAINER_NAME }} 2>/dev/null || true
+            "$DOCKER_BIN" rm ${{ env.CONTAINER_NAME }} 2>/dev/null || true
 
             # Run the new container
-            docker run -d \
+            "$DOCKER_BIN" run -d \
               --name ${{ env.CONTAINER_NAME }} \
               --restart unless-stopped \
               -p 9696:5000 \
@@ -69,7 +88,7 @@ jobs:
               -v /share/Container/travel-quizzer/data:/app/data:ro \
               -v /share/Container/travel-quizzer/media:/app/media:ro \
               -e SECRET_KEY="${{ secrets.FLASK_SECRET_KEY }}" \
-              --health-cmd "curl -f http://localhost:5000/api/quiz || exit 1" \
+              --health-cmd "curl -f http://localhost:5000/health || exit 1" \
               --health-interval 10s \
               --health-timeout 5s \
               --health-retries 5 \
@@ -79,7 +98,7 @@ jobs:
             # Wait for container to become healthy
             echo "Waiting for container to become healthy..."
             for i in $(seq 1 12); do
-              STATUS=$(docker inspect --format='{{.State.Health.Status}}' ${{ env.CONTAINER_NAME }} 2>/dev/null || echo "unknown")
+              STATUS=$("$DOCKER_BIN" inspect --format='{{.State.Health.Status}}' ${{ env.CONTAINER_NAME }} 2>/dev/null || echo "unknown")
               echo "  Attempt $i/12: status=$STATUS"
               if [ "$STATUS" = "healthy" ]; then
                 echo "Container is healthy!"
@@ -87,17 +106,17 @@ jobs:
               fi
               if [ "$STATUS" = "unhealthy" ]; then
                 echo "Container is unhealthy. Fetching logs..."
-                docker logs --tail 30 ${{ env.CONTAINER_NAME }}
+                "$DOCKER_BIN" logs --tail 30 ${{ env.CONTAINER_NAME }}
                 exit 1
               fi
               sleep 10
             done
 
             # Final check
-            STATUS=$(docker inspect --format='{{.State.Health.Status}}' ${{ env.CONTAINER_NAME }} 2>/dev/null || echo "unknown")
+            STATUS=$("$DOCKER_BIN" inspect --format='{{.State.Health.Status}}' ${{ env.CONTAINER_NAME }} 2>/dev/null || echo "unknown")
             if [ "$STATUS" != "healthy" ]; then
               echo "Container did not become healthy within timeout."
-              docker logs --tail 30 ${{ env.CONTAINER_NAME }}
+              "$DOCKER_BIN" logs --tail 30 ${{ env.CONTAINER_NAME }}
               exit 1
             fi
 
@@ -109,7 +128,25 @@ jobs:
           username: ${{ secrets.QNAP_USER }}
           key: ${{ secrets.QNAP_SSH_KEY }}
           script: |
-            docker exec ${{ env.CONTAINER_NAME }} uv run --no-project python -m scripts.seed_db
+            resolve_docker() {
+              if command -v docker >/dev/null 2>&1; then
+                command -v docker
+                return 0
+              fi
+              for candidate in \
+                /share/CACHEDEV2_DATA/.qpkg/container-station/bin/docker \
+                /share/CACHEDEV2_DATA/.qpkg/ContainerStation/bin/docker; do
+                if [ -x "$candidate" ]; then
+                  echo "$candidate"
+                  return 0
+                fi
+              done
+              echo "Docker CLI not found on QNAP host" >&2
+              return 1
+            }
+
+            DOCKER_BIN=$(resolve_docker)
+            "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} uv run --no-project python -m scripts.seed_db
 
       - name: Verify deployment
         uses: appleboy/ssh-action@v1
@@ -119,8 +156,27 @@ jobs:
           username: ${{ secrets.QNAP_USER }}
           key: ${{ secrets.QNAP_SSH_KEY }}
           script: |
+            resolve_docker() {
+              if command -v docker >/dev/null 2>&1; then
+                command -v docker
+                return 0
+              fi
+              for candidate in \
+                /share/CACHEDEV2_DATA/.qpkg/container-station/bin/docker \
+                /share/CACHEDEV2_DATA/.qpkg/ContainerStation/bin/docker; do
+                if [ -x "$candidate" ]; then
+                  echo "$candidate"
+                  return 0
+                fi
+              done
+              echo "Docker CLI not found on QNAP host" >&2
+              return 1
+            }
+
+            DOCKER_BIN=$(resolve_docker)
+
             # Confirm the API responds with quiz data
-            RESPONSE=$(docker exec ${{ env.CONTAINER_NAME }} curl -sf http://localhost:5000/api/quiz)
+            RESPONSE=$("$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} curl -sf http://localhost:5000/api/quiz)
             if [ -z "$RESPONSE" ]; then
               echo "API returned empty response after seeding."
               exit 1
@@ -130,4 +186,4 @@ jobs:
             echo ""
 
             # Clean up old images
-            docker image prune -f
+            "$DOCKER_BIN" image prune -f
