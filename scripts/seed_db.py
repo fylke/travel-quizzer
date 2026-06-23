@@ -39,6 +39,10 @@ def _load_destinations(path=None):
     """
     seed_path = path or os.environ.get("SEED_DATA_PATH") or DEFAULT_SEED_FILE
     if not os.path.isfile(seed_path) and seed_path == DEFAULT_SEED_FILE and os.path.isfile(LEGACY_SEED_FILE):
+        print(
+            f"WARNING: {DEFAULT_SEED_FILE} not found, falling back to {LEGACY_SEED_FILE}",
+            file=sys.stderr,
+        )
         seed_path = LEGACY_SEED_FILE
     if not os.path.isfile(seed_path):
         return None
@@ -92,11 +96,11 @@ def seed(destinations=None):
                 destinations = _load_destinations()
             if not destinations:
                 print(
-                    "WARNING: No seed data found. Place destination data in "
+                    "ERROR: No seed data found. Place destination data in "
                     "data/countries.json or set SEED_DATA_PATH.",
                     file=sys.stderr,
                 )
-                return
+                sys.exit(1)
 
             added = 0
             for dest_data in destinations:

@@ -51,6 +51,35 @@ uv run e2e-test
 
 Uses `pytest` + `playwright` against `test_e2e/`.
 
+**Important**: Playwright does not officially support this Ubuntu version. Before running e2e tests locally, apply the platform detection patch:
+
+```bash
+uv run python -c "
+import pathlib, playwright
+base = pathlib.Path(playwright.__file__).parent / 'driver' / 'package' / 'lib'
+targets = list(base.glob('**/hostPlatform.js')) + list(base.glob('coreBundle.js'))
+for p in targets:
+    if p.exists():
+        text = p.read_text()
+        text = text.replace('\"ubuntu\" + distroInfo.version + archSuffix', '\"ubuntu24.04\" + archSuffix')
+        text = text.replace(\"'ubuntu' + distroInfo.version + archSuffix\", \"'ubuntu24.04' + archSuffix\")
+        p.write_text(text)
+"
+```
+
+**Always run `uv run e2e-test` locally before pushing e2e-related fixes.** Do not rely on CI round-trips to verify changes — iterate locally until tests pass, then push once.
+
+### Before Pushing
+
+Always run all relevant tests locally before pushing:
+
+```bash
+uv run unit-test    # Unit tests
+uv run e2e-test     # End-to-end tests
+```
+
+Do not rely on CI round-trips to catch failures. Iterate locally until tests pass, then push once.
+
 ### Frontend Tests
 
 Jasmine specs live in `test_frontend/spec/`. Run via `test_frontend/run_tests.py`.
