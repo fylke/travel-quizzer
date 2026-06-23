@@ -88,42 +88,25 @@ jobs:
               -v /share/Container/travel-quizzer/data:/app/data:ro \
               -v /share/Container/travel-quizzer/media:/app/media:ro \
               -e SECRET_KEY="${{ secrets.FLASK_SECRET_KEY }}" \
-              --health-cmd "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=3)\"" \
-              --health-interval 10s \
-              --health-timeout 5s \
-              --health-retries 8 \
-              --health-start-period 20s \
               ${{ env.IMAGE_NAME }}:latest
 
-            # Wait for container to become healthy
-            echo "Waiting for container to become healthy..."
-            for i in $(seq 1 12); do
-              STATUS=$("$DOCKER_BIN" inspect --format='{{.State.Health.Status}}' ${{ env.CONTAINER_NAME }} 2>/dev/null || echo "unknown")
-              echo "  Attempt $i/12: status=$STATUS"
-              if [ "$STATUS" = "healthy" ]; then
-                echo "Container is healthy!"
+            # Wait for app readiness using an explicit in-container probe.
+            echo "Waiting for container to become ready..."
+            READY=0
+            for i in $(seq 1 24); do
+              if "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=5)" >/dev/null 2>&1; then
+                echo "Container is ready!"
+                READY=1
                 break
               fi
-              if [ "$STATUS" = "unhealthy" ]; then
-                echo "Container is unhealthy. Fetching logs..."
-                "$DOCKER_BIN" logs --tail 30 ${{ env.CONTAINER_NAME }}
-                echo "Healthcheck probe output:"
-                "$DOCKER_BIN" inspect --format='{{range .State.Health.Log}}{{println .ExitCode "|" .Output}}{{end}}' ${{ env.CONTAINER_NAME }} || true
-                echo "Manual health probe from inside container:"
-                "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health', timeout=5).read().decode('utf-8'))" || true
-                exit 1
-              fi
-              sleep 10
+              echo "  Attempt $i/24: not ready yet"
+              sleep 5
             done
 
-            # Final check
-            STATUS=$("$DOCKER_BIN" inspect --format='{{.State.Health.Status}}' ${{ env.CONTAINER_NAME }} 2>/dev/null || echo "unknown")
-            if [ "$STATUS" != "healthy" ]; then
-              echo "Container did not become healthy within timeout."
-              "$DOCKER_BIN" logs --tail 30 ${{ env.CONTAINER_NAME }}
-              echo "Healthcheck probe output:"
-              "$DOCKER_BIN" inspect --format='{{range .State.Health.Log}}{{println .ExitCode "|" .Output}}{{end}}' ${{ env.CONTAINER_NAME }} || true
-              echo "Manual health probe from inside container:"
+            if [ "$READY" -ne 1 ]; then
+              echo "Container did not become ready within timeout."
+              "$DOCKER_BIN" logs --tail 60 ${{ env.CONTAINER_NAME }}
+              echo "Manual health probe output:"
               "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health', timeout=5).read().decode('utf-8'))" || true
               exit 1
             fi
