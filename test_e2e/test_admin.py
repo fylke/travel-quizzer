@@ -258,7 +258,6 @@ def test_delete_destination_with_confirmation(admin_page: Page):
                 hint3="Known as the City of Light.",
                 hint4="Home to the Louvre museum.",
                 hint5="Located on the Seine river.",
-                images=["https://example.com/paris1.jpg", "https://example.com/paris2.jpg"],
                 correct_answers=["paris", "paris, france"],
             )
             flask_db.session.add(dest)

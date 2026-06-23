@@ -50,7 +50,6 @@ def app_server():
             hint3="Known as the City of Light.",
             hint4="Home to the Louvre museum.",
             hint5="Located on the Seine river.",
-            images=["https://example.com/paris1.jpg", "https://example.com/paris2.jpg"],
             correct_answers=["paris", "paris, france"],
         )
         db.session.add(dest)
