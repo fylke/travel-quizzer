@@ -166,13 +166,13 @@ jobs:
 
             DOCKER_BIN=$(resolve_docker)
 
-            # Confirm the API responds with quiz data
-            RESPONSE=$("$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/api/quiz', timeout=5).read().decode('utf-8'))")
+            # Confirm the app responds on a public endpoint
+            RESPONSE=$("$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health', timeout=5).read().decode('utf-8'))")
             if [ -z "$RESPONSE" ]; then
-              echo "API returned empty response after seeding."
+              echo "Health endpoint returned empty response after seeding."
               exit 1
             fi
-            echo "Deployment verified. API response:"
+            echo "Deployment verified. Health response:"
             echo "$RESPONSE" | head -c 200
             echo ""
 
