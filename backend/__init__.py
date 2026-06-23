@@ -280,10 +280,7 @@ def get_status():
 def get_stats():
     """Return detailed cumulative statistics for the current user."""
     user = get_current_user()
-    try:
-        results = QuizResult.query.filter_by(user_id=user.id).all()
-    except Exception:
-        return jsonify({"error": "Unable to retrieve statistics"}), 500
+    results = QuizResult.query.filter_by(user_id=user.id).all()
 
     completed = [r for r in results if not r.ongoing]
     ongoing = [r for r in results if r.ongoing]

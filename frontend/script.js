@@ -57,7 +57,12 @@ function clearAuthError() {
 async function loadUser() {
     try {
         const response = await fetch(`${API_BASE}/api/me`);
+        if (response.status === 401) {
+            showScreen('welcomeScreen');
+            return;
+        }
         if (!response.ok) {
+            showNotification('Unable to reach server. Please try again.');
             showScreen('welcomeScreen');
             return;
         }
@@ -67,6 +72,7 @@ async function loadUser() {
         showStatusScreen();
     } catch (error) {
         console.error('Error checking auth status:', error);
+        showNotification('Cannot connect to server.');
         showScreen('welcomeScreen');
     }
 }
@@ -364,9 +370,12 @@ async function showStatusScreen() {
             document.getElementById('statsAccuracyRate').textContent = stats.accuracyRate + '%';
             document.getElementById('statsCurrentStreak').textContent = stats.currentStreak;
             document.getElementById('statsOngoing').textContent = stats.quizzesOngoing;
+        } else {
+            showNotification('Failed to load statistics.');
         }
     } catch (error) {
         console.error('Error loading stats:', error);
+        showNotification('Cannot connect to server.');
     }
 
     // Show/hide admin link based on user role
