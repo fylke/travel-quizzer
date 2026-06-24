@@ -867,3 +867,75 @@ body {
 .app-notification-fade {
     opacity: 0;
 }
+
+/* ==================== Forgot Password Modal ==================== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-card {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-card h2 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 1.4em;
+    text-align: center;
+}
+
+.modal-form-group {
+    margin-bottom: 20px;
+}
+
+.modal-form-group label {
+    display: block;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 6px;
+    font-size: 0.9em;
+}
+
+.modal-form-group input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95em;
+    font-family: inherit;
+    transition: border-color 0.3s;
+}
+
+.modal-form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.inline-error {
+    display: block;
+    color: #f44336;
+    font-size: 0.8em;
+    margin-top: 4px;
+    min-height: 1.2em;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}

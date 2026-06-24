@@ -32,6 +32,7 @@ class User(db.Model):
     name = db.Column(db.String(128), nullable=False)
     email = db.Column(db.String(128), nullable=False, unique=True)
     is_admin = db.Column(db.Boolean, nullable=False, default=False)
+    password_changed_at = db.Column(db.DateTime, nullable=True, default=None)
 
     results = db.relationship('QuizResult', back_populates='user', cascade='all, delete-orphan')
 
@@ -46,3 +47,16 @@ class QuizResult(db.Model):
 
     user = db.relationship('User', back_populates='results')
     country = db.relationship('Destination', back_populates='results')
+
+
+class PasswordResetToken(db.Model):
+    __tablename__ = 'password_reset_token'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    token_hash = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    created_at = db.Column(db.DateTime, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    consumed = db.Column(db.Boolean, nullable=False, default=False)
+
+    user = db.relationship('User', backref=db.backref('reset_tokens', cascade='all, delete-orphan'))

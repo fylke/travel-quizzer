@@ -24,7 +24,7 @@ def test_register_new_user(page: Page, base_url: str):
     page.goto(base_url)
 
     # Switch to register mode
-    page.click("#switchToRegister")
+    page.click("#switchToRegister a")
     expect(page.locator("#name")).to_be_visible()
 
     # Fill in registration form
@@ -88,10 +88,10 @@ def test_toggle_between_login_and_register(page: Page, base_url: str):
     expect(page.locator("#switchToRegister")).to_be_visible()
 
     # Switch to register
-    page.click("#switchToRegister")
+    page.click("#switchToRegister a")
     expect(page.locator("#name")).not_to_have_class("hidden")
     expect(page.locator("#switchToLogin")).to_be_visible()
 
     # Switch back to login
-    page.click("#switchToLogin")
+    page.click("#switchToLogin a")
     expect(page.locator("#name")).to_have_class("hidden")
