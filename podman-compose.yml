@@ -12,6 +12,12 @@ services:
       - ./media:/app/media:ro
     environment:
       QUIZ_DATABASE_URL: postgresql+psycopg2://quizzer:quizzer_pass@postgres:5432/travel_quizzer
+      SMTP_HOST:
+      SMTP_PORT: 587
+      SMTP_USERNAME:
+      SMTP_PASSWORD:
+      SMTP_FROM_ADDRESS:
+      SMTP_USE_TLS: "false"
     depends_on:
       postgres:
         condition: service_healthy

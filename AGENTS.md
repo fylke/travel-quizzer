@@ -67,8 +67,6 @@ for p in targets:
 "
 ```
 
-**Always run `uv run e2e-test` locally before pushing e2e-related fixes.** Do not rely on CI round-trips to verify changes — iterate locally until tests pass, then push once.
-
 ### Before Pushing
 
 Always run all relevant tests locally before pushing:
@@ -119,13 +117,19 @@ test_frontend/    # Frontend Jasmine specs
 
 ## Environment Variables
 
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `SECRET_KEY` | Flask session signing (required in production) | insecure fallback in dev |
-| `QUIZ_DATABASE_URL` / `DATABASE_URL` | SQLAlchemy database URI | `sqlite:///database/quiz_data.db` |
-| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed origins | `*` |
-| `RATELIMIT_STORAGE_URI` | Flask-Limiter backend | `memory://` |
-| `SESSION_COOKIE_SECURE` | Set cookie secure flag | `false` |
+| Variable                             | Purpose                                        | Default                           |
+| --------------------------------------| ------------------------------------------------| -----------------------------------|
+| `SECRET_KEY`                         | Flask session signing (required in production) | insecure fallback in dev          |
+| `QUIZ_DATABASE_URL` / `DATABASE_URL` | SQLAlchemy database URI                        | `sqlite:///database/quiz_data.db` |
+| `CORS_ALLOWED_ORIGINS`               | Comma-separated allowed origins                | `*`                               |
+| `RATELIMIT_STORAGE_URI`              | Flask-Limiter backend                          | `memory://`                       |
+| `SESSION_COOKIE_SECURE`              | Set cookie secure flag                         | `false`                           |
+| `SMTP_HOST`                          | SMTP server hostname for sending emails        | _(none)_                          |
+| `SMTP_PORT`                          | SMTP server port (1–65535)                     | _(none)_                          |
+| `SMTP_USERNAME`                      | SMTP authentication username                   | _(none)_                          |
+| `SMTP_PASSWORD`                      | SMTP authentication password                   | _(none)_                          |
+| `SMTP_FROM_ADDRESS`                  | Sender address for outgoing emails             | _(none)_                          |
+| `SMTP_USE_TLS`                       | Use TLS for SMTP connection ("true" enables)   | _(not set)_                       |
 
 ## Conventions
 
@@ -135,3 +139,4 @@ test_frontend/    # Frontend Jasmine specs
 - All API endpoints return JSON. Errors use `{"error": "message"}` with appropriate HTTP status codes.
 - Tests use an in-memory SQLite database — never modify `database/quiz_data.db` in tests.
 - When designing solutions, the policy should be to "fail fast" - if input data is not on the expected form, no attempt should be made to fix it in the app, instead more care should be take at system boundry to make sure input is on the correct format before sending it on.
+- Deprecation warnings should be taken seriously and be fixed.

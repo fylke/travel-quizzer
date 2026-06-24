@@ -49,6 +49,7 @@
 
                 <p id="switchToRegister" class="auth-toggle-link">Don't have an account? <a href="#" onclick="toggleAuthMode('register'); return false;">Register now.</a></p>
                 <p id="switchToLogin" class="auth-toggle-link hidden">Already have an account? <a href="#" onclick="toggleAuthMode('login'); return false;">Log in.</a></p>
+                <p class="auth-toggle-link"><a href="#" id="forgotPasswordLink" onclick="openForgotPasswordModal(); return false;">Forgot password?</a></p>
 
                 <div id="loadingMessage" class="loading-message" style="display: none;">
                     Loading quiz...
@@ -244,6 +245,22 @@
                         <button onclick="hideDeleteDialog()" class="btn btn-secondary">Cancel</button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="forgotPasswordModalHeading">
+        <div class="modal-card">
+            <h2 id="forgotPasswordModalHeading">Reset your password</h2>
+            <div class="modal-form-group">
+                <label for="resetEmail">Email address</label>
+                <input type="email" id="resetEmail" placeholder="Enter your email" maxlength="100">
+                <span class="inline-error" id="resetEmailError" role="alert"></span>
+            </div>
+            <div class="modal-buttons">
+                <button onclick="handleForgotPasswordSubmit()" class="btn btn-primary" id="forgotPasswordSubmitBtn">Submit</button>
+                <button onclick="closeForgotPasswordModal()" class="btn btn-secondary" id="forgotPasswordCancelBtn">Cancel</button>
             </div>
         </div>
     </div>

@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import wraps
 import logging
 import secrets
@@ -14,6 +15,8 @@ import sqlalchemy.exc
 from werkzeug.security import check_password_hash, generate_password_hash
 from .models import db, Destination, QuizResult, User
 from .admin import validate_destination_payload, normalize_answers
+from .email_service import EmailServiceError, send_password_reset_email
+from .reset_tokens import consume_token, generate_token, validate_token
 from .stats import compute_stats
 
 # Basic email format check — intentionally lenient but catches obvious junk
@@ -165,7 +168,14 @@ def get_current_user():
     user_id = session.get('user_id')
     if not user_id:
         return None
-    return db.session.get(User, user_id)
+    user = db.session.get(User, user_id)
+    if user is None:
+        return None
+    if user.password_changed_at is not None:
+        logged_in_at = session.get('logged_in_at', 0)
+        if logged_in_at < user.password_changed_at.timestamp():
+            return None
+    return user
 
 
 def login_required(fn):
@@ -231,6 +241,7 @@ def register():
     db.session.commit()
 
     session['user_id'] = user.id
+    session['logged_in_at'] = datetime.utcnow().timestamp()
     csrf_token = _generate_csrf_token()
     return jsonify({"id": user.id, "name": user.name, "email": user.email, "isAdmin": user.is_admin, "csrfToken": csrf_token})
 
@@ -250,6 +261,7 @@ def login():
         return jsonify({"error": "Invalid credentials"}), 401
 
     session['user_id'] = user.id
+    session['logged_in_at'] = datetime.utcnow().timestamp()
     csrf_token = _generate_csrf_token()
     return jsonify({"id": user.id, "name": user.name, "email": user.email, "isAdmin": user.is_admin, "csrfToken": csrf_token})
 
@@ -268,6 +280,69 @@ def me():
         return jsonify({"error": "Not authenticated"}), 401
     csrf_token = _generate_csrf_token()
     return jsonify({"id": user.id, "name": user.name, "email": user.email, "isAdmin": user.is_admin, "csrfToken": csrf_token})
+
+
+@app.route('/api/forgot-password', methods=['POST'])
+@limiter.limit("3 per hour", key_func=lambda: (request.json or {}).get("email", ""))
+@limiter.limit("10 per hour")
+def forgot_password():
+    data = request.json or {}
+    email = (data.get('email') or '').strip().lower()
+
+    if not email:
+        return jsonify({"error": "Email is required."}), 400
+
+    if not _EMAIL_RE.match(email):
+        return jsonify({"error": "Invalid email format."}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if user:
+        raw_token = generate_token(user)
+        reset_url = f"{request.host_url}reset-password?token={raw_token}"
+        try:
+            send_password_reset_email(email, reset_url)
+        except EmailServiceError as exc:
+            app.logger.error("Failed to send reset email to %s: %s", email, exc.reason)
+            return jsonify({"error": "Failed to send reset email. Please try again later."}), 500
+
+    return jsonify({"message": "If that email is registered, a reset link has been sent."})
+
+
+@app.route('/api/reset-password/validate', methods=['GET'])
+def validate_reset_token():
+    token = request.args.get('token', '')
+    record = validate_token(token)
+    if record is not None:
+        return jsonify({"valid": True})
+    return jsonify({"error": "Invalid or expired reset link."}), 400
+
+
+@app.route('/api/reset-password', methods=['POST'])
+def reset_password():
+    data = request.json or {}
+    token = (data.get('token') or '').strip()
+    password = data.get('password') or ''
+
+    if not token:
+        return jsonify({"error": "Token is required."}), 400
+
+    if not password:
+        return jsonify({"error": "Password is required."}), 400
+
+    if len(password) < 8 or len(password) > 128:
+        return jsonify({"error": "Password must be between 8 and 128 characters."}), 400
+
+    record = validate_token(token)
+    if record is None:
+        return jsonify({"error": "Invalid or expired reset link."}), 400
+
+    try:
+        consume_token(record, password)
+    except Exception:
+        app.logger.exception("Unexpected error during password reset")
+        return jsonify({"error": "An unexpected error occurred. Please try again."}), 500
+
+    return jsonify({"message": "Your password has been reset. You may now log in."})
 
 
 @app.route('/api/status', methods=['GET'])
@@ -585,6 +660,12 @@ def update_destination(destination_id):
         ],
         "correct_answers": destination.correct_answers,
     })
+
+
+@app.route('/reset-password')
+def reset_password_page():
+    """Serve the password reset form page."""
+    return send_from_directory(STATIC_DIR, 'reset_password.html')
 
 
 @app.route('/')
