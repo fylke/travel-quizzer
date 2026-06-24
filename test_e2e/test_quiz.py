@@ -12,7 +12,7 @@ def setup(clean_db):
 def _register_and_start(page: Page, base_url: str, name: str = "Quizzer"):
     """Helper to register a user and land on the quiz screen via status."""
     page.goto(base_url)
-    page.click("#switchToRegister")
+    page.click("#switchToRegister a")
     page.fill("#name", name)
     page.fill("#email", f"{name.lower().replace(' ', '')}@test.com")
     page.fill("#password", "password123")

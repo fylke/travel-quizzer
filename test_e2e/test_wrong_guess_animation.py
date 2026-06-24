@@ -17,7 +17,7 @@ def setup(clean_db):
 def _register_and_start(page: Page, base_url: str):
     """Register a user and navigate to the quiz screen."""
     page.goto(base_url)
-    page.click("#switchToRegister")
+    page.click("#switchToRegister a")
     page.fill("#name", "Tester")
     page.fill("#email", "tester@test.com")
     page.fill("#password", "password123")
