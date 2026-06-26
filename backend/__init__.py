@@ -1,6 +1,7 @@
 from datetime import datetime
 from functools import wraps
 import logging
+from pathlib import Path
 import secrets
 import sys
 
@@ -17,6 +18,7 @@ from .models import db, Destination, QuizResult, User
 from .admin import validate_destination_payload, normalize_answers
 from .email_service import EmailServiceError, send_password_reset_email
 from .reset_tokens import consume_token, generate_token, validate_token
+from .quiz_types import get_registry, validate_registry
 from .stats import compute_stats
 
 # Basic email format check — intentionally lenient but catches obvious junk
@@ -136,6 +138,13 @@ with app.app_context():
     except sqlalchemy.exc.OperationalError as e:
         logger.error("Database connection failed: %s", e)
         sys.exit(1)
+
+# Validate quiz type registry at startup (fail fast)
+_registry_errors = validate_registry(get_registry())
+if _registry_errors:
+    for _err in _registry_errors:
+        logger.error("Quiz type registry error: %s", _err)
+    sys.exit(1)
 
 
 def _generate_csrf_token():
@@ -358,6 +367,40 @@ def get_status():
         "totalPoints": total_points,
         "quizzesOngoing": len([r for r in results if r.ongoing]),
     })
+
+
+@app.route('/api/quiz-types', methods=['GET'])
+@login_required
+def list_quiz_types():
+    """Return the list of registered quiz types."""
+    registry = get_registry()
+    return jsonify([
+        {"identifier": qt.identifier, "displayName": qt.display_name}
+        for qt in registry
+    ])
+
+
+_IDENTIFIER_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+
+
+@app.route('/api/rules/<quiz_type>', methods=['GET'])
+@login_required
+def get_rules(quiz_type):
+    """Return raw markdown rules content for a given quiz type."""
+    # Reject path separators
+    if '/' in quiz_type or '\\' in quiz_type:
+        return jsonify({"error": "Invalid quiz type identifier"}), 400
+
+    # Validate identifier pattern
+    if not _IDENTIFIER_PATTERN.match(quiz_type):
+        return jsonify({"error": "Invalid quiz type identifier"}), 400
+
+    rules_path = Path(__file__).parent / "assets" / "rules" / f"{quiz_type}.md"
+    if not rules_path.is_file():
+        return jsonify({"error": f"Rules not found for quiz type '{quiz_type}'"}), 404
+
+    content = rules_path.read_text(encoding="utf-8")
+    return jsonify({"content": content})
 
 
 @app.route('/api/stats', methods=['GET'])
