@@ -9,6 +9,33 @@ const API_BASE = window.location.origin;
 let authMode = 'login';
 let submitting = false; // guards against double-click on submit
 
+// Validation rules fetched from the backend — single source of truth.
+// Fallback defaults are used until the fetch completes.
+let validationRules = {
+    password: { minLength: 8, maxLength: 128 },
+    destination: {
+        nameMaxLength: 128,
+        hintCount: 5,
+        hintMaxLength: 256,
+        imagesMinCount: 2,
+        imagesMaxCount: 10,
+        answersMinCount: 1,
+        answersMaxCount: 20,
+        answerMaxLength: 128
+    }
+};
+
+async function loadValidationRules() {
+    try {
+        const response = await fetch(`${API_BASE}/api/validation-rules`);
+        if (response.ok) {
+            validationRules = await response.json();
+        }
+    } catch (error) {
+        console.error('Failed to load validation rules, using defaults:', error);
+    }
+}
+
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(screen => {
         screen.classList.add('hidden');
@@ -108,13 +135,13 @@ function toggleAuthMode(mode) {
 function getPasswordStrength(password) {
     if (!password) return { level: 0, label: '' };
     let score = 0;
-    if (password.length >= 8) score++;
+    if (password.length >= validationRules.password.minLength) score++;
     if (password.length >= 12) score++;
     if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
     if (/\d/.test(password)) score++;
     if (/[^a-zA-Z0-9]/.test(password)) score++;
 
-    if (password.length < 8) return { level: 1, label: 'Too short' };
+    if (password.length < validationRules.password.minLength) return { level: 1, label: 'Too short' };
     if (score <= 2) return { level: 1, label: 'Weak' };
     if (score === 3) return { level: 2, label: 'Fair' };
     if (score === 4) return { level: 3, label: 'Good' };
@@ -155,8 +182,8 @@ async function handleAuth() {
         return;
     }
 
-    if (authMode === 'register' && password.length < 8) {
-        showAuthError('Password must be at least 8 characters.');
+    if (authMode === 'register' && password.length < validationRules.password.minLength) {
+        showAuthError(`Password must be at least ${validationRules.password.minLength} characters.`);
         return;
     }
 
@@ -766,30 +793,30 @@ async function saveDestination() {
         showAdminError('Name is required');
         return;
     }
-    if (name.length > 128) {
-        showAdminError('Name must be 128 characters or less');
+    if (name.length > validationRules.destination.nameMaxLength) {
+        showAdminError(`Name must be ${validationRules.destination.nameMaxLength} characters or less`);
         return;
     }
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < validationRules.destination.hintCount; i++) {
         if (!hints[i]) {
             showAdminError(`Hint ${i + 1} is required`);
             return;
         }
-        if (hints[i].length > 256) {
-            showAdminError(`Hint ${i + 1} must be 256 characters or less`);
+        if (hints[i].length > validationRules.destination.hintMaxLength) {
+            showAdminError(`Hint ${i + 1} must be ${validationRules.destination.hintMaxLength} characters or less`);
             return;
         }
     }
-    if (images.length < 2) {
-        showAdminError('At least 2 image URLs are required');
+    if (images.length < validationRules.destination.imagesMinCount) {
+        showAdminError(`At least ${validationRules.destination.imagesMinCount} image URLs are required`);
         return;
     }
-    if (images.length > 10) {
-        showAdminError('No more than 10 image URLs are allowed');
+    if (images.length > validationRules.destination.imagesMaxCount) {
+        showAdminError(`No more than ${validationRules.destination.imagesMaxCount} image URLs are allowed`);
         return;
     }
-    if (correct_answers.length < 1 || correct_answers.length > 20) {
-        showAdminError('Between 1 and 20 correct answers are required');
+    if (correct_answers.length < validationRules.destination.answersMinCount || correct_answers.length > validationRules.destination.answersMaxCount) {
+        showAdminError(`Between ${validationRules.destination.answersMinCount} and ${validationRules.destination.answersMaxCount} correct answers are required`);
         return;
     }
 
@@ -1275,5 +1302,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    loadValidationRules();
     loadUser();
 });

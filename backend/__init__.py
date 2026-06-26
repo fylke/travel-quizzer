@@ -21,6 +21,7 @@ from .routes_admin import admin_bp
 from .routes_auth import auth_bp
 from .routes_quiz import quiz_bp
 from .stats import compute_stats
+from .validation_rules import as_dict as validation_rules_dict
 
 # Re-export auth utilities so existing imports like `from backend import admin_required` still work.
 
@@ -161,6 +162,7 @@ limiter.limit("10 per hour")(app.view_functions["auth.forgot_password"])
 # Misc routes (health, static files, stats, quiz types, rules)
 # ---------------------------------------------------------------------------
 
+
 @app.route("/health", methods=["GET"])
 def health_check():
     """Public health check endpoint for container orchestration."""
@@ -169,6 +171,12 @@ def health_check():
         return jsonify({"status": "healthy"}), 200
     except Exception as e:
         return jsonify({"status": "unhealthy", "error": str(e)}), 503
+
+
+@app.route("/api/validation-rules", methods=["GET"])
+def get_validation_rules():
+    """Return validation constraints for use by the frontend."""
+    return jsonify(validation_rules_dict())
 
 
 @app.route("/api/status", methods=["GET"])

@@ -18,6 +18,7 @@ from .auth import (
 from .email_service import EmailServiceError, send_password_reset_email
 from .models import User, db
 from .reset_tokens import consume_token, generate_token, validate_token
+from .validation_rules import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -44,8 +45,13 @@ def register():
     if not _EMAIL_RE.match(email):
         return jsonify({"error": "Invalid email format"}), 400
 
-    if len(password) < 8:
-        return jsonify({"error": "Password must be at least 8 characters"}), 400
+    if len(password) < PASSWORD_MIN_LENGTH:
+        return (
+            jsonify(
+                {"error": f"Password must be at least {PASSWORD_MIN_LENGTH} characters"}
+            ),
+            400,
+        )
 
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Email already registered"}), 400
@@ -144,9 +150,13 @@ def reset_password():
     if not password:
         return jsonify({"error": "Password is required."}), 400
 
-    if len(password) < 8 or len(password) > 128:
+    if len(password) < PASSWORD_MIN_LENGTH or len(password) > PASSWORD_MAX_LENGTH:
         return (
-            jsonify({"error": "Password must be between 8 and 128 characters."}),
+            jsonify(
+                {
+                    "error": f"Password must be between {PASSWORD_MIN_LENGTH} and {PASSWORD_MAX_LENGTH} characters."
+                }
+            ),
             400,
         )
 
