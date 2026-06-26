@@ -387,7 +387,183 @@ async function showStatusScreen() {
             adminLink.style.display = 'none';
         }
     }
+
+    // Fetch and render quiz type buttons
+    await loadQuizTypeButtons();
 }
+
+async function loadQuizTypeButtons() {
+    // Hide the static "Run Random Quiz" button
+    const staticRunBtn = document.getElementById('runRandomQuizBtn');
+    if (staticRunBtn) {
+        staticRunBtn.style.display = 'none';
+    }
+
+    // Find or create the quiz type buttons container
+    let quizTypeContainer = document.getElementById('quizTypeButtonsContainer');
+    if (!quizTypeContainer) {
+        quizTypeContainer = document.createElement('div');
+        quizTypeContainer.id = 'quizTypeButtonsContainer';
+        quizTypeContainer.className = 'quiz-type-buttons-container';
+        // Insert before the admin link button
+        const quizActions = document.querySelector('.quiz-actions');
+        const adminLinkEl = quizActions ? quizActions.querySelector('#adminLink') : null;
+        if (quizActions && adminLinkEl) {
+            quizActions.insertBefore(quizTypeContainer, adminLinkEl);
+        } else if (quizActions && staticRunBtn && staticRunBtn.parentNode === quizActions) {
+            quizActions.insertBefore(quizTypeContainer, staticRunBtn.nextSibling);
+        } else if (quizActions) {
+            quizActions.appendChild(quizTypeContainer);
+        }
+    }
+
+    // Clear previous content
+    quizTypeContainer.innerHTML = '';
+
+    try {
+        const response = await fetch(`${API_BASE}/api/quiz-types`);
+        if (!response.ok) {
+            showNotification('Could not load quiz types.');
+            return;
+        }
+
+        const quizTypes = await response.json();
+
+        if (quizTypes.length === 0) {
+            quizTypeContainer.innerHTML = '<p class="quiz-type-empty-message">No quiz types are currently available.</p>';
+            return;
+        }
+
+        // Sort alphabetically by displayName
+        quizTypes.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+        // Render one button per quiz type with adjacent info icon
+        quizTypes.forEach(type => {
+            const row = document.createElement('div');
+            row.className = 'quiz-type-row';
+
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-primary quiz-type-btn';
+            btn.textContent = type.displayName;
+            btn.addEventListener('click', () => runRandomQuiz());
+
+            const infoBtn = document.createElement('button');
+            infoBtn.className = 'btn btn-secondary quiz-type-info-btn';
+            infoBtn.setAttribute('aria-label', `Rules for ${type.displayName}`);
+            infoBtn.textContent = 'ℹ️';
+            infoBtn.addEventListener('click', () => openRulesModal(type.identifier));
+
+            row.appendChild(btn);
+            row.appendChild(infoBtn);
+            quizTypeContainer.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error loading quiz types:', error);
+        showNotification('Could not load quiz types.');
+    }
+}
+
+// ==================== Rules Modal ====================
+
+let _rulesModalTrigger = null;
+
+async function openRulesModal(quizType) {
+    // Store reference to triggering element for focus restoration
+    _rulesModalTrigger = document.activeElement;
+
+    const modal = document.getElementById('rulesModal');
+    const titleEl = document.getElementById('rulesModalTitle');
+    const contentEl = document.getElementById('rulesModalContent');
+
+    // Show modal with loading state
+    titleEl.textContent = 'Rules';
+    contentEl.innerHTML = '<p class="rules-loading">Loading...</p>';
+    modal.style.display = 'flex';
+
+    // Fetch rules content
+    try {
+        const response = await fetch(`${API_BASE}/api/rules/${encodeURIComponent(quizType)}`);
+        if (!response.ok) {
+            // Hide modal and notify user
+            modal.style.display = 'none';
+            const errData = await response.json().catch(() => ({}));
+            showNotification(errData.error || 'Could not load rules.');
+            if (_rulesModalTrigger) _rulesModalTrigger.focus();
+            return;
+        }
+
+        const data = await response.json();
+        contentEl.innerHTML = renderMarkdown(data.content);
+    } catch (error) {
+        console.error('Error fetching rules:', error);
+        modal.style.display = 'none';
+        showNotification('Could not load rules.');
+        if (_rulesModalTrigger) _rulesModalTrigger.focus();
+        return;
+    }
+
+    // Focus the close button
+    const closeBtn = document.getElementById('rulesModalCloseBtn');
+    if (closeBtn) closeBtn.focus();
+}
+
+function closeRulesModal() {
+    const modal = document.getElementById('rulesModal');
+    modal.style.display = 'none';
+
+    // Return focus to the element that triggered the modal
+    if (_rulesModalTrigger) {
+        _rulesModalTrigger.focus();
+        _rulesModalTrigger = null;
+    }
+}
+
+// Focus trap and Escape key handling for rules modal
+(function setupRulesModalFocusTrap() {
+    document.addEventListener('keydown', function (e) {
+        const modal = document.getElementById('rulesModal');
+        if (!modal || modal.style.display === 'none') return;
+
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeRulesModal();
+            return;
+        }
+
+        if (e.key === 'Tab') {
+            // Gather all focusable elements inside the modal
+            const focusableSelectors = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+            const focusableElements = Array.from(modal.querySelectorAll(focusableSelectors)).filter(el => el.offsetParent !== null);
+
+            if (focusableElements.length === 0) return;
+
+            const firstEl = focusableElements[0];
+            const lastEl = focusableElements[focusableElements.length - 1];
+
+            if (e.shiftKey) {
+                if (document.activeElement === firstEl) {
+                    e.preventDefault();
+                    lastEl.focus();
+                }
+            } else {
+                if (document.activeElement === lastEl) {
+                    e.preventDefault();
+                    firstEl.focus();
+                }
+            }
+        }
+    });
+})();
+
+// Wire up the close button
+document.addEventListener('DOMContentLoaded', function () {
+    const closeBtn = document.getElementById('rulesModalCloseBtn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeRulesModal);
+    }
+});
+
+// ==================== End Rules Modal ====================
 
 function backToStatus() {
     showStatusScreen();
@@ -603,6 +779,10 @@ async function saveDestination() {
             showAdminError(`Hint ${i + 1} must be 256 characters or less`);
             return;
         }
+    }
+    if (images.length < 2) {
+        showAdminError('At least 2 image URLs are required');
+        return;
     }
     if (images.length > 10) {
         showAdminError('No more than 10 image URLs are allowed');
@@ -945,6 +1125,117 @@ function _showForgotPasswordConfirmation() {
 })();
 
 // ==================== End Forgot Password Modal ====================
+
+// ==================== Markdown Renderer ====================
+
+/**
+ * Minimal markdown-to-HTML renderer.
+ * Supports: headings (#, ##, ###), unordered lists (- or *), ordered lists (1.),
+ * paragraphs, bold (**text**), and italic (*text*).
+ *
+ * @param {string} mdText - Raw markdown string
+ * @returns {string} HTML string
+ */
+function renderMarkdown(mdText) {
+    if (!mdText) return '';
+
+    const lines = mdText.split('\n');
+    const output = [];
+    let inUl = false;
+    let inOl = false;
+    let paragraphLines = [];
+
+    function applyInline(text) {
+        // Bold first (**text**), then italic (*text*)
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        return text;
+    }
+
+    function flushParagraph() {
+        if (paragraphLines.length > 0) {
+            output.push('<p>' + applyInline(paragraphLines.join(' ')) + '</p>');
+            paragraphLines = [];
+        }
+    }
+
+    function closeList() {
+        if (inUl) {
+            output.push('</ul>');
+            inUl = false;
+        }
+        if (inOl) {
+            output.push('</ol>');
+            inOl = false;
+        }
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        // Empty line — flush paragraph and close lists
+        if (line.trim() === '') {
+            flushParagraph();
+            closeList();
+            continue;
+        }
+
+        // Headings
+        const headingMatch = line.match(/^(#{1,3})\s+(.*)/);
+        if (headingMatch) {
+            flushParagraph();
+            closeList();
+            const level = headingMatch[1].length;
+            const content = applyInline(headingMatch[2]);
+            output.push('<h' + level + '>' + content + '</h' + level + '>');
+            continue;
+        }
+
+        // Unordered list items (- or * followed by space)
+        const ulMatch = line.match(/^[\-\*]\s+(.*)/);
+        if (ulMatch) {
+            flushParagraph();
+            if (inOl) {
+                output.push('</ol>');
+                inOl = false;
+            }
+            if (!inUl) {
+                output.push('<ul>');
+                inUl = true;
+            }
+            output.push('<li>' + applyInline(ulMatch[1]) + '</li>');
+            continue;
+        }
+
+        // Ordered list items (number followed by . and space)
+        const olMatch = line.match(/^\d+\.\s+(.*)/);
+        if (olMatch) {
+            flushParagraph();
+            if (inUl) {
+                output.push('</ul>');
+                inUl = false;
+            }
+            if (!inOl) {
+                output.push('<ol>');
+                inOl = true;
+            }
+            output.push('<li>' + applyInline(olMatch[1]) + '</li>');
+            continue;
+        }
+
+        // Regular text — accumulate into paragraph
+        closeList();
+        paragraphLines.push(line);
+    }
+
+    // Flush remaining content
+    flushParagraph();
+    closeList();
+
+    return output.join('');
+}
+
+// ==================== End Markdown Renderer ====================
 
 // Allow Enter key to submit answer
 document.addEventListener('DOMContentLoaded', () => {

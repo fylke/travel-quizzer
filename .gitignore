@@ -13,6 +13,9 @@ dist/
 .vscode/
 .idea/
 
+# Kiro specs
+.kiro/specs/
+
 # OS
 .DS_Store
 database/quiz_data.db
