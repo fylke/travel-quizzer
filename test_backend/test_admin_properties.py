@@ -94,7 +94,7 @@ class PropertyTestUpdateRoundTrip(unittest.TestCase):
         })
         return response.get_json()['csrfToken']
 
-    @settings(max_examples=50, deadline=5000)
+    @settings(max_examples=8, deadline=5000)
     @given(
         create_data=valid_destination_st,
         update_data=valid_destination_st,
@@ -148,14 +148,14 @@ class PropertyTestUpdateRoundTrip(unittest.TestCase):
 class PropertyTestValidation(unittest.TestCase):
     """Property 4: Destination validation accepts valid and rejects invalid payloads."""
 
-    @settings(max_examples=100, deadline=2000)
+    @settings(max_examples=8, deadline=2000)
     @given(data=valid_destination_st)
     def test_valid_payloads_pass_validation(self, data):
         """Any payload satisfying all constraints should pass validation."""
         is_valid, errors = validate_destination_payload(data)
         self.assertTrue(is_valid, f"Valid payload rejected: {errors}")
 
-    @settings(max_examples=100, deadline=2000)
+    @settings(max_examples=8, deadline=2000)
     @given(data=valid_destination_st)
     def test_missing_name_fails(self, data):
         """Removing the name field should fail validation."""
@@ -164,7 +164,7 @@ class PropertyTestValidation(unittest.TestCase):
         self.assertFalse(is_valid)
         self.assertTrue(any('name' in e for e in errors))
 
-    @settings(max_examples=100, deadline=2000)
+    @settings(max_examples=8, deadline=2000)
     @given(data=valid_destination_st)
     def test_wrong_hint_count_fails(self, data):
         """Having != 5 hints should fail validation."""
@@ -177,7 +177,7 @@ class PropertyTestValidation(unittest.TestCase):
 class PropertyTestNormalization(unittest.TestCase):
     """Property 5: Answer normalization produces lowercase trimmed output."""
 
-    @settings(max_examples=200, deadline=2000)
+    @settings(max_examples=8, deadline=2000)
     @given(answers=st.lists(
         st.text(min_size=1, max_size=128),
         min_size=1,

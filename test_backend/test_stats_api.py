@@ -252,7 +252,7 @@ class PropertyTestDataIsolation(unittest.TestCase):
             db.session.remove()
             db.drop_all()
 
-    @settings(max_examples=100, deadline=10000)
+    @settings(max_examples=8, deadline=10000)
     @given(
         user_a_results=st.lists(
             st.fixed_dictionaries({

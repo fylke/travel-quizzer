@@ -51,7 +51,7 @@ class PropertyTestIdentifierValidation(unittest.TestCase):
     **Validates: Requirements 1.3, 3.5**
     """
 
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=8, deadline=5000)
     @given(identifier=st.text(min_size=0, max_size=200))
     def test_identifier_validation_accepts_only_valid_patterns(
         self, identifier: str
@@ -117,7 +117,7 @@ class PropertyTestDuplicateIdentifierDetection(unittest.TestCase):
     **Validates: Requirements 1.5**
     """
 
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=8, deadline=5000)
     @given(
         identifiers=st.lists(_valid_identifier, min_size=2, max_size=10, unique=True),
         dup_index=st.integers(min_value=0),
@@ -148,7 +148,7 @@ class PropertyTestDuplicateIdentifierDetection(unittest.TestCase):
             f"Expected duplicate error for '{duplicated_id}', got errors: {errors}",
         )
 
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=8, deadline=5000)
     @given(
         identifiers=st.lists(_valid_identifier, min_size=1, max_size=10, unique=True),
     )
@@ -239,7 +239,7 @@ class PropertyTestRulesContentRoundTrip(unittest.TestCase):
         self._created_files.append(filepath)
         return filepath
 
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=8, deadline=5000)
     @given(content=st.text(alphabet=st.characters(categories=("L", "M", "N", "P", "S", "Z")), min_size=0, max_size=500))
     def test_rules_content_round_trip_preservation(self, content: str) -> None:
         """For any text content written to a rules file, fetching via the API

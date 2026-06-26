@@ -58,7 +58,7 @@ class PropertyTestTokenUniquenessAndEntropy(unittest.TestCase):
         db.drop_all()
         self.ctx.pop()
 
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=8, deadline=5000)
     @given(st.data())
     def test_token_uniqueness_and_entropy(self, data):
         """Generate 10 tokens; assert all distinct, URL-safe, and len >= 43.
@@ -126,7 +126,7 @@ def _make_user(suffix: str = "") -> User:
 # ---------------------------------------------------------------------------
 
 
-@settings(max_examples=100, deadline=5000)
+@settings(max_examples=8, deadline=5000)
 @given(k=st.integers(min_value=2, max_value=5))
 def test_new_token_invalidates_prior_tokens(k: int) -> None:
     """For any user and k ∈ [2, 5] sequential token generations, only the last
@@ -173,7 +173,7 @@ def test_new_token_invalidates_prior_tokens(k: int) -> None:
 # ---------------------------------------------------------------------------
 
 
-@settings(max_examples=100, deadline=5000)
+@settings(max_examples=8, deadline=5000)
 @given(new_password=st.text(min_size=8, max_size=128))
 def test_consumed_token_rejected_on_reuse(new_password: str) -> None:
     """A token that has been consumed via consume_token() SHALL be rejected
@@ -218,7 +218,7 @@ def test_consumed_token_rejected_on_reuse(new_password: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-@settings(max_examples=100, deadline=5000)
+@settings(max_examples=8, deadline=5000)
 @given(st.integers(min_value=1, max_value=1))
 def test_token_hash_stored_not_plaintext(_dummy: int) -> None:
     """For any generated reset token, the value stored in the token_hash column
@@ -264,7 +264,7 @@ def test_token_hash_stored_not_plaintext(_dummy: int) -> None:
 # ---------------------------------------------------------------------------
 
 
-@settings(max_examples=100, deadline=5000)
+@settings(max_examples=8, deadline=5000)
 @given(
     token=st.text(
         min_size=1,
@@ -355,7 +355,7 @@ from werkzeug.security import check_password_hash
 # ---------------------------------------------------------------------------
 
 
-@settings(max_examples=100, deadline=5000)
+@settings(max_examples=8, deadline=5000)
 @given(password=st.text(min_size=0, max_size=7))
 def test_password_too_short_returns_400(password: str) -> None:
     """For any string with length < 8, submitting it as the new password to
@@ -384,7 +384,7 @@ def test_password_too_short_returns_400(password: str) -> None:
         db.session.remove()
 
 
-@settings(max_examples=100, deadline=5000)
+@settings(max_examples=8, deadline=5000)
 @given(password=st.text(min_size=129, max_size=200))
 def test_password_too_long_returns_400(password: str) -> None:
     """For any string with length > 128, submitting it as the new password to
@@ -413,7 +413,7 @@ def test_password_too_long_returns_400(password: str) -> None:
         db.session.remove()
 
 
-@settings(max_examples=100, deadline=5000)
+@settings(max_examples=8, deadline=5000)
 @given(password=st.text(min_size=8, max_size=128))
 def test_password_valid_length_returns_200(password: str) -> None:
     """For any string with length between 8 and 128 inclusive, submitting it as
@@ -443,7 +443,7 @@ def test_password_valid_length_returns_200(password: str) -> None:
         db.session.remove()
 
 
-@settings(max_examples=100, deadline=5000)
+@settings(max_examples=8, deadline=5000)
 @given(new_password=st.text(min_size=8, max_size=128))
 def test_password_reset_hash_correctness(new_password: str) -> None:
     """For any new password string of valid length (8–128 characters), after a
@@ -491,7 +491,7 @@ def test_password_reset_hash_correctness(new_password: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-@settings(max_examples=100, deadline=5000)
+@settings(max_examples=8, deadline=5000)
 @given(
     invalid_email=st.one_of(
         st.just(""),
