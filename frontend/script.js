@@ -36,6 +36,8 @@ async function loadValidationRules() {
     }
 }
 
+// ==================== UI Utilities ====================
+
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(screen => {
         screen.classList.add('hidden');
@@ -80,6 +82,8 @@ function clearAuthError() {
         el.style.display = 'none';
     }
 }
+
+// ==================== Auth ====================
 
 async function loadUser() {
     try {
@@ -222,6 +226,27 @@ async function handleAuth() {
         showAuthError('Unable to authenticate. Please try again.');
     }
 }
+
+async function handleLogout() {
+    try {
+        const headers = {};
+        if (csrfToken) {
+            headers['X-CSRF-Token'] = csrfToken;
+        }
+        await fetch(`${API_BASE}/api/logout`, { method: 'POST', headers });
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+    quizState.user = null;
+    csrfToken = null;
+    showScreen('welcomeScreen');
+}
+
+async function logout() {
+    await handleLogout();
+}
+
+// ==================== Quiz Flow ====================
 
 function displayQuiz(data) {
     submitting = false;
@@ -384,6 +409,8 @@ function retakeQuiz() {
     loadQuestion();
 }
 
+// ==================== Status Screen ====================
+
 async function showStatusScreen() {
     showScreen('statusScreen');
     try {
@@ -490,108 +517,6 @@ async function loadQuizTypeButtons() {
     }
 }
 
-// ==================== Rules Modal ====================
-
-let _rulesModalTrigger = null;
-
-async function openRulesModal(quizType) {
-    // Store reference to triggering element for focus restoration
-    _rulesModalTrigger = document.activeElement;
-
-    const modal = document.getElementById('rulesModal');
-    const titleEl = document.getElementById('rulesModalTitle');
-    const contentEl = document.getElementById('rulesModalContent');
-
-    // Show modal with loading state
-    titleEl.textContent = 'Rules';
-    contentEl.innerHTML = '<p class="rules-loading">Loading...</p>';
-    modal.style.display = 'flex';
-
-    // Fetch rules content
-    try {
-        const response = await fetch(`${API_BASE}/api/rules/${encodeURIComponent(quizType)}`);
-        if (!response.ok) {
-            // Hide modal and notify user
-            modal.style.display = 'none';
-            const errData = await response.json().catch(() => ({}));
-            showNotification(errData.error || 'Could not load rules.');
-            if (_rulesModalTrigger) _rulesModalTrigger.focus();
-            return;
-        }
-
-        const data = await response.json();
-        contentEl.innerHTML = renderMarkdown(data.content);
-    } catch (error) {
-        console.error('Error fetching rules:', error);
-        modal.style.display = 'none';
-        showNotification('Could not load rules.');
-        if (_rulesModalTrigger) _rulesModalTrigger.focus();
-        return;
-    }
-
-    // Focus the close button
-    const closeBtn = document.getElementById('rulesModalCloseBtn');
-    if (closeBtn) closeBtn.focus();
-}
-
-function closeRulesModal() {
-    const modal = document.getElementById('rulesModal');
-    modal.style.display = 'none';
-
-    // Return focus to the element that triggered the modal
-    if (_rulesModalTrigger) {
-        _rulesModalTrigger.focus();
-        _rulesModalTrigger = null;
-    }
-}
-
-// Focus trap and Escape key handling for rules modal
-(function setupRulesModalFocusTrap() {
-    document.addEventListener('keydown', function (e) {
-        const modal = document.getElementById('rulesModal');
-        if (!modal || modal.style.display === 'none') return;
-
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            closeRulesModal();
-            return;
-        }
-
-        if (e.key === 'Tab') {
-            // Gather all focusable elements inside the modal
-            const focusableSelectors = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-            const focusableElements = Array.from(modal.querySelectorAll(focusableSelectors)).filter(el => el.offsetParent !== null);
-
-            if (focusableElements.length === 0) return;
-
-            const firstEl = focusableElements[0];
-            const lastEl = focusableElements[focusableElements.length - 1];
-
-            if (e.shiftKey) {
-                if (document.activeElement === firstEl) {
-                    e.preventDefault();
-                    lastEl.focus();
-                }
-            } else {
-                if (document.activeElement === lastEl) {
-                    e.preventDefault();
-                    firstEl.focus();
-                }
-            }
-        }
-    });
-})();
-
-// Wire up the close button
-document.addEventListener('DOMContentLoaded', function () {
-    const closeBtn = document.getElementById('rulesModalCloseBtn');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeRulesModal);
-    }
-});
-
-// ==================== End Rules Modal ====================
-
 function backToStatus() {
     showStatusScreen();
 }
@@ -622,318 +547,6 @@ async function runSpecificQuiz() {
         showNotification('Failed to load quiz.');
     }
 }
-
-async function handleLogout() {
-    try {
-        const headers = {};
-        if (csrfToken) {
-            headers['X-CSRF-Token'] = csrfToken;
-        }
-        await fetch(`${API_BASE}/api/logout`, { method: 'POST', headers });
-    } catch (error) {
-        console.error('Logout error:', error);
-    }
-    quizState.user = null;
-    csrfToken = null;
-    showScreen('welcomeScreen');
-}
-
-async function logout() {
-    await handleLogout();
-}
-
-// ==================== Admin Panel ====================
-
-let editingDestId = null;
-
-function showAdminScreen() {
-    showScreen('adminScreen');
-    hideAdminForm();
-    loadDestinations();
-}
-
-function hideAdminScreen() {
-    showStatusScreen();
-}
-
-function showAdminError(message) {
-    const el = document.getElementById('adminError');
-    el.textContent = message;
-    el.style.display = 'block';
-    setTimeout(() => { el.style.display = 'none'; }, 5000);
-}
-
-function showAdminSuccess(message) {
-    const el = document.getElementById('adminSuccess');
-    el.textContent = message;
-    el.style.display = 'block';
-    setTimeout(() => { el.style.display = 'none'; }, 3000);
-}
-
-async function loadDestinations() {
-    const listEl = document.getElementById('adminDestList');
-    const countEl = document.getElementById('adminDestCount');
-    const emptyEl = document.getElementById('adminEmptyState');
-
-    try {
-        const response = await fetch(`${API_BASE}/api/admin/destinations`);
-        if (!response.ok) {
-            const err = await response.json();
-            showAdminError(err.error || 'Failed to load destinations');
-            return;
-        }
-        const data = await response.json();
-        const destinations = data.destinations;
-        countEl.textContent = `Total destinations: ${data.count}`;
-
-        if (destinations.length === 0) {
-            emptyEl.style.display = 'block';
-            listEl.innerHTML = '';
-            return;
-        }
-
-        emptyEl.style.display = 'none';
-        listEl.innerHTML = destinations.map(dest => `
-            <div class="admin-dest-item">
-                <span class="admin-dest-id">#${dest.id}</span>
-                <span class="admin-dest-name">${escapeHtml(dest.name)}</span>
-                <div class="admin-dest-actions">
-                    <button onclick="showDestinationForm(${dest.id})" class="btn btn-secondary btn-small">Edit</button>
-                    <button onclick="deleteDestination(${dest.id}, '${escapeHtml(dest.name).replace(/'/g, "\\'")}')" class="btn btn-danger btn-small">Delete</button>
-                </div>
-            </div>
-        `).join('');
-    } catch (error) {
-        console.error('Error loading destinations:', error);
-        showAdminError('Could not connect to server');
-    }
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-async function showDestinationForm(id) {
-    editingDestId = id || null;
-    const formTitle = document.getElementById('adminFormTitle');
-    const formEl = document.getElementById('adminForm');
-
-    // Clear form fields
-    document.getElementById('adminDestName').value = '';
-    for (let i = 1; i <= 5; i++) {
-        document.getElementById(`adminHint${i}`).value = '';
-    }
-    document.getElementById('adminImagesContainer').innerHTML = '';
-    document.getElementById('adminAnswersContainer').innerHTML = '';
-
-    if (editingDestId) {
-        formTitle.textContent = 'Edit Destination';
-        try {
-            const response = await fetch(`${API_BASE}/api/admin/destinations/${editingDestId}`);
-            if (!response.ok) {
-                const err = await response.json();
-                showAdminError(err.error || 'Failed to load destination');
-                return;
-            }
-            const dest = await response.json();
-            document.getElementById('adminDestName').value = dest.name;
-            for (let i = 0; i < 5; i++) {
-                document.getElementById(`adminHint${i + 1}`).value = dest.hints[i] || '';
-            }
-            (dest.images || []).forEach(url => addImageField(url));
-            if (!dest.images || dest.images.length === 0) {
-                addImageField('');
-                addImageField('');
-            }
-            dest.correct_answers.forEach(ans => addAnswerField(ans));
-        } catch (error) {
-            console.error('Error loading destination:', error);
-            showAdminError('Could not connect to server');
-            return;
-        }
-    } else {
-        formTitle.textContent = 'Add New Destination';
-        // Start with 2 image fields and 1 answer field
-        addImageField('');
-        addImageField('');
-        addAnswerField('');
-    }
-
-    // Show form, hide list
-    formEl.style.display = 'block';
-    document.getElementById('adminDestList').style.display = 'none';
-    document.querySelector('.admin-actions').style.display = 'none';
-    document.getElementById('adminDestCount').style.display = 'none';
-    document.getElementById('adminEmptyState').style.display = 'none';
-}
-
-function hideAdminForm() {
-    document.getElementById('adminForm').style.display = 'none';
-    document.getElementById('adminDestList').style.display = '';
-    document.querySelector('.admin-actions').style.display = '';
-    document.getElementById('adminDestCount').style.display = '';
-    editingDestId = null;
-}
-
-async function saveDestination() {
-    const name = document.getElementById('adminDestName').value.trim();
-    const hints = [];
-    for (let i = 1; i <= 5; i++) {
-        hints.push(document.getElementById(`adminHint${i}`).value.trim());
-    }
-    const imageInputs = document.querySelectorAll('#adminImagesContainer input');
-    const images = Array.from(imageInputs).map(input => input.value.trim()).filter(v => v);
-    const answerInputs = document.querySelectorAll('#adminAnswersContainer input');
-    const correct_answers = Array.from(answerInputs).map(input => input.value.trim()).filter(v => v);
-
-    // Client-side validation
-    if (!name) {
-        showAdminError('Name is required');
-        return;
-    }
-    if (name.length > validationRules.destination.nameMaxLength) {
-        showAdminError(`Name must be ${validationRules.destination.nameMaxLength} characters or less`);
-        return;
-    }
-    for (let i = 0; i < validationRules.destination.hintCount; i++) {
-        if (!hints[i]) {
-            showAdminError(`Hint ${i + 1} is required`);
-            return;
-        }
-        if (hints[i].length > validationRules.destination.hintMaxLength) {
-            showAdminError(`Hint ${i + 1} must be ${validationRules.destination.hintMaxLength} characters or less`);
-            return;
-        }
-    }
-    if (images.length < validationRules.destination.imagesMinCount) {
-        showAdminError(`At least ${validationRules.destination.imagesMinCount} image URLs are required`);
-        return;
-    }
-    if (images.length > validationRules.destination.imagesMaxCount) {
-        showAdminError(`No more than ${validationRules.destination.imagesMaxCount} image URLs are allowed`);
-        return;
-    }
-    if (correct_answers.length < validationRules.destination.answersMinCount || correct_answers.length > validationRules.destination.answersMaxCount) {
-        showAdminError(`Between ${validationRules.destination.answersMinCount} and ${validationRules.destination.answersMaxCount} correct answers are required`);
-        return;
-    }
-
-    const payload = { name, hints, images, correct_answers };
-    const headers = { 'Content-Type': 'application/json' };
-    if (csrfToken) {
-        headers['X-CSRF-Token'] = csrfToken;
-    }
-
-    try {
-        let response;
-        if (editingDestId) {
-            response = await fetch(`${API_BASE}/api/admin/destinations/${editingDestId}`, {
-                method: 'PUT',
-                headers,
-                body: JSON.stringify(payload)
-            });
-        } else {
-            response = await fetch(`${API_BASE}/api/admin/destinations`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(payload)
-            });
-        }
-
-        if (!response.ok) {
-            const err = await response.json();
-            if (err.details) {
-                showAdminError(err.details.join(', '));
-            } else {
-                showAdminError(err.error || 'Failed to save destination');
-            }
-            return;
-        }
-
-        showAdminSuccess(editingDestId ? 'Destination updated successfully' : 'Destination created successfully');
-        hideAdminForm();
-        loadDestinations();
-    } catch (error) {
-        console.error('Error saving destination:', error);
-        showAdminError('Could not connect to server');
-    }
-}
-
-function deleteDestination(id, name) {
-    const dialog = document.getElementById('adminDeleteDialog');
-    document.getElementById('adminDeleteName').textContent = name;
-    dialog.style.display = 'flex';
-
-    const confirmBtn = document.getElementById('adminDeleteConfirmBtn');
-    // Remove old listener by replacing the node
-    const newBtn = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
-    newBtn.addEventListener('click', async () => {
-        const headers = {};
-        if (csrfToken) {
-            headers['X-CSRF-Token'] = csrfToken;
-        }
-        try {
-            const response = await fetch(`${API_BASE}/api/admin/destinations/${id}`, {
-                method: 'DELETE',
-                headers
-            });
-            if (!response.ok) {
-                const err = await response.json();
-                showAdminError(err.error || 'Failed to delete destination');
-            } else {
-                showAdminSuccess('Destination deleted successfully');
-                loadDestinations();
-            }
-        } catch (error) {
-            console.error('Error deleting destination:', error);
-            showAdminError('Could not connect to server');
-        }
-        hideDeleteDialog();
-    });
-}
-
-function hideDeleteDialog() {
-    document.getElementById('adminDeleteDialog').style.display = 'none';
-}
-
-function addImageField(value) {
-    const container = document.getElementById('adminImagesContainer');
-    const row = document.createElement('div');
-    row.className = 'admin-dynamic-field-row';
-    row.innerHTML = `
-        <input type="url" value="${escapeAttr(value || '')}" placeholder="https://example.com/image.jpg">
-        <button type="button" onclick="removeImageField(this)" class="btn btn-danger btn-small">✕</button>
-    `;
-    container.appendChild(row);
-}
-
-function removeImageField(btn) {
-    btn.parentElement.remove();
-}
-
-function addAnswerField(value) {
-    const container = document.getElementById('adminAnswersContainer');
-    const row = document.createElement('div');
-    row.className = 'admin-dynamic-field-row';
-    row.innerHTML = `
-        <input type="text" value="${escapeAttr(value || '')}" maxlength="128" placeholder="Correct answer">
-        <button type="button" onclick="removeAnswerField(this)" class="btn btn-danger btn-small">✕</button>
-    `;
-    container.appendChild(row);
-}
-
-function removeAnswerField(btn) {
-    btn.parentElement.remove();
-}
-
-function escapeAttr(str) {
-    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-// ==================== End Admin Panel ====================
 
 // ==================== Wrong Guess Animation ====================
 
@@ -1008,261 +621,7 @@ function animateWrongGuess(inputElement) {
     }, 1500);
 }
 
-// ==================== End Wrong Guess Animation ====================
-
-// ==================== Forgot Password Modal ====================
-
-const _FORGOT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function openForgotPasswordModal() {
-    const modal = document.getElementById('forgotPasswordModal');
-    const emailInput = document.getElementById('resetEmail');
-    const errorEl = document.getElementById('resetEmailError');
-
-    // Clear prior state
-    emailInput.value = '';
-    errorEl.textContent = '';
-
-    // Show modal
-    modal.style.display = 'flex';
-
-    // Reset to form view (in case a confirmation message was previously shown)
-    const formGroup = modal.querySelector('.modal-form-group');
-    const buttons = modal.querySelector('.modal-buttons');
-    if (formGroup) formGroup.style.display = '';
-    if (buttons) buttons.style.display = '';
-    const confirmationMsg = document.getElementById('forgotPasswordConfirmation');
-    if (confirmationMsg) confirmationMsg.remove();
-
-    // Focus on email input
-    emailInput.focus();
-}
-
-function closeForgotPasswordModal() {
-    const modal = document.getElementById('forgotPasswordModal');
-    modal.style.display = 'none';
-
-    // Return focus to the "Forgot password?" link
-    const link = document.getElementById('forgotPasswordLink');
-    if (link) link.focus();
-}
-
-async function handleForgotPasswordSubmit() {
-    const emailInput = document.getElementById('resetEmail');
-    const errorEl = document.getElementById('resetEmailError');
-    const email = emailInput.value.trim();
-
-    // Clear previous error
-    errorEl.textContent = '';
-
-    // Validate: non-empty
-    if (!email) {
-        errorEl.textContent = 'Please enter your email address.';
-        emailInput.focus();
-        return;
-    }
-
-    // Validate: valid format
-    if (!_FORGOT_EMAIL_RE.test(email)) {
-        errorEl.textContent = 'Please enter a valid email address.';
-        emailInput.focus();
-        return;
-    }
-
-    // Submit to backend
-    try {
-        const response = await fetch(`${API_BASE}/api/forgot-password`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-        });
-
-        if (response.status === 500) {
-            errorEl.textContent = 'Failed to send reset email. Please try again later.';
-            return;
-        }
-
-        // For any valid-format email (200 or other non-500), show confirmation
-        _showForgotPasswordConfirmation();
-    } catch (error) {
-        console.error('Forgot password error:', error);
-        errorEl.textContent = 'Failed to send reset email. Please try again later.';
-    }
-}
-
-function _showForgotPasswordConfirmation() {
-    const modal = document.getElementById('forgotPasswordModal');
-    const formGroup = modal.querySelector('.modal-form-group');
-    const buttons = modal.querySelector('.modal-buttons');
-
-    // Hide the form elements
-    if (formGroup) formGroup.style.display = 'none';
-    if (buttons) buttons.style.display = 'none';
-
-    // Show confirmation message
-    const confirmation = document.createElement('div');
-    confirmation.id = 'forgotPasswordConfirmation';
-    confirmation.className = 'modal-confirmation';
-    confirmation.innerHTML = `
-        <p>If that email is registered, a reset link has been sent.</p>
-        <button onclick="closeForgotPasswordModal()" class="btn btn-primary">Close</button>
-    `;
-    modal.querySelector('.modal-card').appendChild(confirmation);
-}
-
-// Focus trap for the forgot password modal
-(function setupForgotPasswordFocusTrap() {
-    document.addEventListener('keydown', function (e) {
-        const modal = document.getElementById('forgotPasswordModal');
-        if (!modal || modal.style.display === 'none') return;
-
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            closeForgotPasswordModal();
-            return;
-        }
-
-        if (e.key === 'Tab') {
-            const focusableElements = [
-                document.getElementById('resetEmail'),
-                document.getElementById('forgotPasswordSubmitBtn'),
-                document.getElementById('forgotPasswordCancelBtn')
-            ].filter(el => el && el.offsetParent !== null);
-
-            if (focusableElements.length === 0) return;
-
-            const firstEl = focusableElements[0];
-            const lastEl = focusableElements[focusableElements.length - 1];
-
-            if (e.shiftKey) {
-                // Shift+Tab: if on first element, wrap to last
-                if (document.activeElement === firstEl) {
-                    e.preventDefault();
-                    lastEl.focus();
-                }
-            } else {
-                // Tab: if on last element, wrap to first
-                if (document.activeElement === lastEl) {
-                    e.preventDefault();
-                    firstEl.focus();
-                }
-            }
-        }
-    });
-})();
-
-// ==================== End Forgot Password Modal ====================
-
-// ==================== Markdown Renderer ====================
-
-/**
- * Minimal markdown-to-HTML renderer.
- * Supports: headings (#, ##, ###), unordered lists (- or *), ordered lists (1.),
- * paragraphs, bold (**text**), and italic (*text*).
- *
- * @param {string} mdText - Raw markdown string
- * @returns {string} HTML string
- */
-function renderMarkdown(mdText) {
-    if (!mdText) return '';
-
-    const lines = mdText.split('\n');
-    const output = [];
-    let inUl = false;
-    let inOl = false;
-    let paragraphLines = [];
-
-    function applyInline(text) {
-        // Bold first (**text**), then italic (*text*)
-        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
-        return text;
-    }
-
-    function flushParagraph() {
-        if (paragraphLines.length > 0) {
-            output.push('<p>' + applyInline(paragraphLines.join(' ')) + '</p>');
-            paragraphLines = [];
-        }
-    }
-
-    function closeList() {
-        if (inUl) {
-            output.push('</ul>');
-            inUl = false;
-        }
-        if (inOl) {
-            output.push('</ol>');
-            inOl = false;
-        }
-    }
-
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-
-        // Empty line — flush paragraph and close lists
-        if (line.trim() === '') {
-            flushParagraph();
-            closeList();
-            continue;
-        }
-
-        // Headings
-        const headingMatch = line.match(/^(#{1,3})\s+(.*)/);
-        if (headingMatch) {
-            flushParagraph();
-            closeList();
-            const level = headingMatch[1].length;
-            const content = applyInline(headingMatch[2]);
-            output.push('<h' + level + '>' + content + '</h' + level + '>');
-            continue;
-        }
-
-        // Unordered list items (- or * followed by space)
-        const ulMatch = line.match(/^[\-\*]\s+(.*)/);
-        if (ulMatch) {
-            flushParagraph();
-            if (inOl) {
-                output.push('</ol>');
-                inOl = false;
-            }
-            if (!inUl) {
-                output.push('<ul>');
-                inUl = true;
-            }
-            output.push('<li>' + applyInline(ulMatch[1]) + '</li>');
-            continue;
-        }
-
-        // Ordered list items (number followed by . and space)
-        const olMatch = line.match(/^\d+\.\s+(.*)/);
-        if (olMatch) {
-            flushParagraph();
-            if (inUl) {
-                output.push('</ul>');
-                inUl = false;
-            }
-            if (!inOl) {
-                output.push('<ol>');
-                inOl = true;
-            }
-            output.push('<li>' + applyInline(olMatch[1]) + '</li>');
-            continue;
-        }
-
-        // Regular text — accumulate into paragraph
-        closeList();
-        paragraphLines.push(line);
-    }
-
-    // Flush remaining content
-    flushParagraph();
-    closeList();
-
-    return output.join('');
-}
-
-// ==================== End Markdown Renderer ====================
+// ==================== Initialization ====================
 
 // Allow Enter key to submit answer
 document.addEventListener('DOMContentLoaded', () => {
