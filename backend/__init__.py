@@ -1,6 +1,5 @@
 import logging
 import os
-import re
 import sys
 from pathlib import Path
 
@@ -17,7 +16,7 @@ from .auth import (  # noqa: F401 — re-exported for backward compatibility
     login_required,
 )
 from .models import Destination, QuizResult, User, db
-from .quiz_types import get_registry, validate_registry
+from .quiz_types import IDENTIFIER_PATTERN, get_registry, validate_registry
 from .routes_admin import admin_bp
 from .routes_auth import auth_bp
 from .routes_quiz import quiz_bp
@@ -162,9 +161,6 @@ limiter.limit("10 per hour")(app.view_functions["auth.forgot_password"])
 # Misc routes (health, static files, stats, quiz types, rules)
 # ---------------------------------------------------------------------------
 
-_IDENTIFIER_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
-
-
 @app.route("/health", methods=["GET"])
 def health_check():
     """Public health check endpoint for container orchestration."""
@@ -216,7 +212,7 @@ def get_rules(quiz_type):
     if "/" in quiz_type or "\\" in quiz_type:
         return jsonify({"error": "Invalid quiz type identifier"}), 400
 
-    if not _IDENTIFIER_PATTERN.match(quiz_type):
+    if not IDENTIFIER_PATTERN.match(quiz_type):
         return jsonify({"error": "Invalid quiz type identifier"}), 400
 
     rules_path = Path(__file__).parent / "assets" / "rules" / f"{quiz_type}.md"
