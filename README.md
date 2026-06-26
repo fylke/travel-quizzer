@@ -13,7 +13,10 @@ travel-quizzer/
 ├── frontend/
 │   ├── index.html         # Main HTML page
 │   ├── style.css          # Styling
-│   └── script.js          # Frontend logic
+│   ├── app.js             # Core app logic (state, auth, quiz flow)
+│   ├── admin.js           # Admin panel
+│   ├── modal.js           # Modal dialogs and focus traps
+│   └── markdown.js        # Markdown renderer
 ├── database/
 │   └── .gitkeep           # Placeholder for the local SQLite database folder
 ├── test_backend/            # Backend unit tests
@@ -105,16 +108,16 @@ uv run e2e-test
 
 ## Environment Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `SECRET_KEY` | Flask session signing key (required in production) | `change-me-in-production` |
-| `QUIZ_DATABASE_URL` | SQLAlchemy database URI | `sqlite:///database/quiz_data.db` |
-| `SMTP_HOST` | SMTP server hostname for sending password reset emails | `smtp.gmail.com` |
-| `SMTP_PORT` | SMTP server port (1–65535) | `587` |
-| `SMTP_USERNAME` | SMTP authentication username | `user@gmail.com` |
-| `SMTP_PASSWORD` | SMTP authentication password | `app-password` |
-| `SMTP_FROM_ADDRESS` | Sender address for outgoing emails | `noreply@travelquizzer.com` |
-| `SMTP_USE_TLS` | Use TLS for SMTP connection (`"true"` enables, any other value uses plain SMTP) | `true` |
+| Variable            | Description                                                                     | Example                           |
+| ---------------------| ---------------------------------------------------------------------------------| -----------------------------------|
+| `SECRET_KEY`        | Flask session signing key (required in production)                              | `change-me-in-production`         |
+| `QUIZ_DATABASE_URL` | SQLAlchemy database URI                                                         | `sqlite:///database/quiz_data.db` |
+| `SMTP_HOST`         | SMTP server hostname for sending password reset emails                          | `smtp.gmail.com`                  |
+| `SMTP_PORT`         | SMTP server port (1–65535)                                                      | `587`                             |
+| `SMTP_USERNAME`     | SMTP authentication username                                                    | `user@gmail.com`                  |
+| `SMTP_PASSWORD`     | SMTP authentication password                                                    | `app-password`                    |
+| `SMTP_FROM_ADDRESS` | Sender address for outgoing emails                                              | `noreply@travelquizzer.com`       |
+| `SMTP_USE_TLS`      | Use TLS for SMTP connection (`"true"` enables, any other value uses plain SMTP) | `true`                            |
 
 ## Technologies Used
 

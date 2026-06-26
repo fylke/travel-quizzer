@@ -1,25 +1,21 @@
 # Countries Quiz Rules
 
-Identify the country from progressive image hints.
+Identify the country from progressively easier hints.
 
 ## How It Works
 
-1. You will be shown two images as hints
-2. Each hint has a difficulty level from 1 (easiest) to 5 (hardest)
-3. You have 3 guesses to identify the correct country
-4. Higher difficulty hints earn more points if answered correctly
+You will be shown a textual hint accompanied by two pictures. There are a total of five hints, you have three guesses in total to get it right and if you're not confident enough to guess, you can move on to the next hint.
+
+The countries are limited to the current UN member states - so Taiwan is for instance not among the valid guesses, neither is Scotland, or territories that belong to other countries like Azores (Portugal), or Greenland (Denmark - for now at least...)
+
+This all works on the honor system - you could of course search online for the answers to the textual hints (which is why there is no global scoreboard). Most common spelling (or name) variations on the country names are accepted, but it's the English name we're looking for, and you are responsible for spelling them correctly (capitalization does not matter). Historical names are typically accepted - for instance Burma for Myanmar, Swaziland for Eswatini, or Turkey for Türkie.
 
 ## Scoring
 
-Your score for each quiz is calculated as:
-
-**hint_difficulty × remaining_guesses**
-
-- Get it right on the first guess with a hard hint for maximum points
-- Running out of guesses scores zero for that destination
+Your score for each quiz is calculated as **hint difficulty × remaining guesses**. Run out of guesses and your score will be zero.
 
 ## Tips
 
-- Pay attention to landscapes, architecture, and cultural clues
-- Harder hints show more abstract or zoomed-in details
-- Use the process of elimination as you progress
+- Click to expand the pictures in order to find clues - pay attention to landscapes, architecture, fashion, and cultural clues
+- You can always go back and check earlier hints for additional context
+- Know when to move on to an easier level instead of wasting guesses

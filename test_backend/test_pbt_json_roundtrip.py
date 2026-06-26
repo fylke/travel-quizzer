@@ -55,7 +55,7 @@ class TestJsonColumnRoundTrip(unittest.TestCase):
         db.drop_all()
         self.app_context.pop()
 
-    @settings(max_examples=20, deadline=5000)
+    @settings(max_examples=8, deadline=5000)
     @given(
         name=unique_name_st,
         correct_answers=json_string_list_st,

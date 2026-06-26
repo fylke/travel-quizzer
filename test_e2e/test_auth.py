@@ -50,35 +50,6 @@ def test_login_with_invalid_credentials(page: Page, base_url: str):
     expect(page.locator("#welcomeScreen")).to_be_visible()
 
 
-def test_login_after_registration(page: Page, base_url: str, playwright):
-    """A user can register and then log in — UI only verifies the login form submits.
-
-    The full register→logout→login cycle is covered by the unit/integration
-    test (test_backend/test_main.py::test_login_after_registration) which is more
-    reliable and faster.  Here we just confirm the login form works for an
-    existing user.
-    """
-    # Register a user via a separate API request context so the page's
-    # cookies are not affected (otherwise the page would already be logged in).
-    api_context = playwright.request.new_context(base_url=base_url)
-    import json
-    resp = api_context.post("/api/register", data=json.dumps({
-        "name": "Login Test",
-        "email": "login@example.com",
-        "password": "mypassword",
-    }), headers={"Content-Type": "application/json"})
-    assert resp.ok, f"Registration failed: {resp.status} {resp.text()}"
-    api_context.dispose()
-
-    # Now test that the login UI works for this user
-    page.goto(base_url)
-    page.fill("#email", "login@example.com")
-    page.fill("#password", "mypassword")
-    page.click("#authButton")
-
-    expect(page.locator("#statusScreen")).to_be_visible(timeout=5000)
-
-
 def test_toggle_between_login_and_register(page: Page, base_url: str):
     """User can switch between login and register modes."""
     page.goto(base_url)

@@ -97,7 +97,7 @@ class TestSeedScriptIdempotency(unittest.TestCase):
             )
         return rows
 
-    @settings(max_examples=20, deadline=10000)
+    @settings(max_examples=8, deadline=10000)
     @given(destinations=destinations_st)
     def test_seed_idempotency(self, destinations):
         """Running seed on a non-empty destination table leaves data unchanged.

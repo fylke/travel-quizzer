@@ -11,7 +11,7 @@ services:
       - ./data:/app/data:ro
       - ./media:/app/media:ro
     environment:
-      QUIZ_DATABASE_URL: postgresql+psycopg2://quizzer:quizzer_pass@postgres:5432/travel_quizzer
+      QUIZ_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-quizzer}:${POSTGRES_PASSWORD:-quizzer_pass}@postgres:5432/${POSTGRES_DB:-travel_quizzer}
       SMTP_HOST:
       SMTP_PORT: 587
       SMTP_USERNAME:
@@ -34,11 +34,11 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_DB: travel_quizzer
-      POSTGRES_USER: quizzer
-      POSTGRES_PASSWORD: quizzer_pass
+      POSTGRES_DB: ${POSTGRES_DB:-travel_quizzer}
+      POSTGRES_USER: ${POSTGRES_USER:-quizzer}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quizzer_pass}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U quizzer -d travel_quizzer"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-quizzer} -d ${POSTGRES_DB:-travel_quizzer}"]
       interval: 10s
       timeout: 5s
       retries: 5

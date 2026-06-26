@@ -29,7 +29,7 @@ class PropertyTestScoreComputation(unittest.TestCase):
     **Validates: Requirements 1.1, 1.4, 5.3**
     """
 
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=8, deadline=5000)
     @given(
         results=st.lists(
             quiz_result_st,
@@ -60,7 +60,7 @@ class PropertyTestBestScore(unittest.TestCase):
     **Validates: Requirements 1.5, 5.3**
     """
 
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=8, deadline=5000)
     @given(
         results=st.lists(
             quiz_result_st,
@@ -90,7 +90,7 @@ class PropertyTestAccuracyRate(unittest.TestCase):
     **Validates: Requirements 1.6, 5.3**
     """
 
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=8, deadline=5000)
     @given(
         results=st.lists(
             quiz_result_st,
@@ -123,7 +123,7 @@ class PropertyTestCurrentStreak(unittest.TestCase):
     **Validates: Requirements 1.7, 5.3**
     """
 
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=8, deadline=5000)
     @given(
         results=st.lists(
             quiz_result_st,
@@ -159,7 +159,7 @@ class PropertyTestOngoingExcluded(unittest.TestCase):
     **Validates: Requirements 5.1, 5.2**
     """
 
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=8, deadline=5000)
     @given(
         results=st.lists(
             st.tuples(

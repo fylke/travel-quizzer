@@ -9,7 +9,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-_IDENTIFIER_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+IDENTIFIER_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 _RULES_DIR = Path(__file__).parent / "assets" / "rules"
 
 
@@ -53,7 +53,7 @@ def validate_registry(quiz_types: list[QuizType]) -> list[str]:
     seen_identifiers: set[str] = set()
 
     for qt in quiz_types:
-        if not _IDENTIFIER_PATTERN.match(qt.identifier):
+        if not IDENTIFIER_PATTERN.match(qt.identifier):
             errors.append(
                 f"Invalid identifier '{qt.identifier}': must match "
                 f"^[a-z0-9][a-z0-9_-]{{0,63}}$"

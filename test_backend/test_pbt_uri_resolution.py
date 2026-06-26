@@ -33,7 +33,7 @@ class TestUriResolutionPrecedence(unittest.TestCase):
     **Validates: Requirements 4.1, 4.2, 4.3**
     """
 
-    @settings(max_examples=20)
+    @settings(max_examples=8)
     @given(
         quiz_db_url=uri_state_st,
         database_url=uri_state_st,

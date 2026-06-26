@@ -21,14 +21,7 @@ class AdminAuthTestCase(unittest.TestCase):
     def setUp(self):
         app.testing = True
         self.client = app.test_client()
-        test_db_path = os.path.join(ROOT_DIR, 'database', 'test_admin_auth.db')
-        try:
-            if os.path.exists(test_db_path):
-                os.remove(test_db_path)
-        except Exception:
-            pass
-
-        app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{test_db_path}"
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
         with app.app_context():
@@ -54,15 +47,9 @@ class AdminAuthTestCase(unittest.TestCase):
             db.session.commit()
 
     def tearDown(self):
-        test_db_path = os.path.join(ROOT_DIR, 'database', 'test_admin_auth.db')
         with app.app_context():
             db.session.remove()
             db.drop_all()
-        try:
-            if os.path.exists(test_db_path):
-                os.remove(test_db_path)
-        except Exception:
-            pass
 
     # --- is_admin field defaults ---
 

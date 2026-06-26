@@ -451,24 +451,4 @@ describe('Admin Panel', function () {
             expect(errorEl.style.display).toBe('block');
         });
     });
-
-    // ========== getPasswordStrength ==========
-    describe('getPasswordStrength', function () {
-        it('returns level 0 for empty string', function () {
-            var result = getPasswordStrength('');
-            expect(result.level).toBe(0);
-        });
-
-        it('returns too short for passwords under 8 chars', function () {
-            var result = getPasswordStrength('abc');
-            expect(result.level).toBe(1);
-            expect(result.label).toBe('Too short');
-        });
-
-        it('returns strong for complex passwords', function () {
-            var result = getPasswordStrength('MyP@ssw0rd123!');
-            expect(result.level).toBe(4);
-            expect(result.label).toBe('Strong');
-        });
-    });
 });

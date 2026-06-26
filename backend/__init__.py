@@ -1,70 +1,65 @@
-from datetime import datetime
-from functools import wraps
 import logging
-from pathlib import Path
-import secrets
+import os
 import sys
+from pathlib import Path
 
-from flask import Flask, jsonify, request, send_from_directory, session
+import sqlalchemy.exc
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-import os
-import random
-import re
-import sqlalchemy.exc
-from werkzeug.security import check_password_hash, generate_password_hash
-from .models import db, Destination, QuizResult, User
-from .admin import validate_destination_payload, normalize_answers
-from .email_service import EmailServiceError, send_password_reset_email
-from .reset_tokens import consume_token, generate_token, validate_token
-from .quiz_types import get_registry, validate_registry
-from .stats import compute_stats
 
-# Basic email format check — intentionally lenient but catches obvious junk
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
-_FUNNY_NAMES = (
-    open(os.path.join(os.path.dirname(__file__), "assets", "names.txt"))
-    .read()
-    .splitlines()
+from .auth import (  # noqa: F401 — re-exported for backward compatibility
+    admin_required,
+    csrf_protected,
+    get_current_user,
+    login_required,
 )
-_FUNNY_NAMES = [n for n in _FUNNY_NAMES if n.strip()]
+from .models import Destination, QuizResult, User, db
+from .quiz_types import IDENTIFIER_PATTERN, get_registry, validate_registry
+from .routes_admin import admin_bp
+from .routes_auth import auth_bp
+from .routes_quiz import quiz_bp
+from .stats import compute_stats
+from .validation_rules import as_dict as validation_rules_dict
+
+# Re-export auth utilities so existing imports like `from backend import admin_required` still work.
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
-STATIC_DIR = os.path.join(PROJECT_ROOT, 'frontend')
+STATIC_DIR = os.path.join(PROJECT_ROOT, "frontend")
 
-app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='/static')
+app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="/static")
 
 # Media directory for quiz images (convention: media/<dest_id>/<hint_level>a.jpg)
-MEDIA_DIR = os.environ.get('MEDIA_DIR', os.path.join(PROJECT_ROOT, 'media'))
+MEDIA_DIR = os.environ.get("MEDIA_DIR", os.path.join(PROJECT_ROOT, "media"))
 
 # Restrict CORS to the app's own origin in production; allow all in dev.
-_cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '*')
-CORS(app, origins=_cors_origins.split(','), supports_credentials=True)
-_secret_key = os.environ.get('SECRET_KEY')
-if not _secret_key:
-    import logging as _logging
+_cors_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "*")
+CORS(app, origins=_cors_origins.split(","), supports_credentials=True)
 
-    _env = os.environ.get('FLASK_ENV', 'development')
-    if _env == 'production':
+_secret_key = os.environ.get("SECRET_KEY")
+if not _secret_key:
+    _env = os.environ.get("FLASK_ENV", "development")
+    if _env == "production":
         raise RuntimeError(
             "SECRET_KEY environment variable must be set in production. "
             "Refusing to start with an insecure default."
         )
-    _logging.getLogger(__name__).warning(
+    logging.getLogger(__name__).warning(
         "SECRET_KEY is not set — using an insecure default. "
         "Do NOT run like this in production."
     )
-    _secret_key = 'change-me-in-production'
+    _secret_key = "change-me-in-production"
 
 app.secret_key = _secret_key
 
 # Secure session cookie configuration
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = (
+    os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
+)
 
 # Rate limiter (uses in-memory storage by default; set RATELIMIT_STORAGE_URI for Redis)
 limiter = Limiter(
@@ -80,7 +75,11 @@ def _disable_limiter_in_testing():
     """Skip rate limiting when app is in testing mode."""
     return app.testing
 
-# Configure database (allow override via env var)
+
+# ---------------------------------------------------------------------------
+# Database configuration
+# ---------------------------------------------------------------------------
+
 logger = logging.getLogger(__name__)
 
 
@@ -101,7 +100,7 @@ def resolve_database_uri(quiz_db_url=None, database_url=None, default_path=None)
 
 
 default_db_path = os.path.join(PROJECT_ROOT, "database", "quiz_data.db")
-_env_db_url = os.environ.get('QUIZ_DATABASE_URL') or os.environ.get('DATABASE_URL')
+_env_db_url = os.environ.get("QUIZ_DATABASE_URL") or os.environ.get("DATABASE_URL")
 db_url = _env_db_url or f"sqlite:///{default_db_path}"
 
 if db_url.startswith("sqlite:///") and db_url != "sqlite:///:memory:":
@@ -122,13 +121,11 @@ if db_url.startswith("sqlite:///") and db_url != "sqlite:///:memory:":
         # Directory already exists — local development, nothing to do
     db_url = f"sqlite:///{db_path}"
 
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 if db_url.startswith("postgresql"):
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'connect_args': {'connect_timeout': 5}
-    }
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"connect_args": {"connect_timeout": 5}}
 
 db.init_app(app)
 
@@ -146,253 +143,84 @@ if _registry_errors:
         logger.error("Quiz type registry error: %s", _err)
     sys.exit(1)
 
+# ---------------------------------------------------------------------------
+# Register blueprints
+# ---------------------------------------------------------------------------
 
-def _generate_csrf_token():
-    """Generate a new CSRF token and store it in the session."""
-    token = secrets.token_hex(32)
-    session['csrf_token'] = token
-    return token
+app.register_blueprint(auth_bp)
+app.register_blueprint(quiz_bp)
+app.register_blueprint(admin_bp)
 
+# Apply rate limits to auth blueprint routes after registration
+limiter.limit("5 per minute")(app.view_functions["auth.login"])
+limiter.limit("3 per hour", key_func=lambda: (request.json or {}).get("email", ""))(
+    app.view_functions["auth.forgot_password"]
+)
+limiter.limit("10 per hour")(app.view_functions["auth.forgot_password"])
 
-def _check_csrf_token():
-    """Validate the CSRF token from the X-CSRF-Token header against the session."""
-    token = request.headers.get('X-CSRF-Token', '')
-    expected = session.get('csrf_token', '')
-    if not expected or not secrets.compare_digest(token, expected):
-        return False
-    return True
-
-
-def csrf_protected(fn):
-    """Decorator that rejects requests with a missing or invalid CSRF token."""
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        if not _check_csrf_token():
-            return jsonify({"error": "Invalid or missing CSRF token"}), 403
-        return fn(*args, **kwargs)
-    return wrapper
+# ---------------------------------------------------------------------------
+# Misc routes (health, static files, stats, quiz types, rules)
+# ---------------------------------------------------------------------------
 
 
-def get_current_user():
-    user_id = session.get('user_id')
-    if not user_id:
-        return None
-    user = db.session.get(User, user_id)
-    if user is None:
-        return None
-    if user.password_changed_at is not None:
-        logged_in_at = session.get('logged_in_at', 0)
-        if logged_in_at < user.password_changed_at.timestamp():
-            return None
-    return user
-
-
-def login_required(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        if get_current_user() is None:
-            return jsonify({"error": "Authentication required"}), 401
-        return fn(*args, **kwargs)
-    return wrapper
-
-
-def admin_required(fn):
-    """Decorator that requires the user to be authenticated AND an admin."""
-    @wraps(fn)
-    @login_required
-    def wrapper(*args, **kwargs):
-        user = get_current_user()
-        if not user.is_admin:
-            return jsonify({"error": "Admin access required"}), 403
-        return fn(*args, **kwargs)
-    return wrapper
-
-
-@app.route('/health', methods=['GET'])
+@app.route("/health", methods=["GET"])
 def health_check():
     """Public health check endpoint for container orchestration."""
     try:
-        # Simple database connectivity check
-        db.session.execute(db.text('SELECT 1'))
+        db.session.execute(db.text("SELECT 1"))
         return jsonify({"status": "healthy"}), 200
     except Exception as e:
         return jsonify({"status": "unhealthy", "error": str(e)}), 503
 
 
-@app.route('/api/register', methods=['POST'])
-def register():
-    data = request.json or {}
-    name = (data.get('name') or '').strip()
-    email = (data.get('email') or '').strip().lower()
-    password = (data.get('password') or '').strip()
-
-    if not email or not password:
-        return jsonify({"error": "Email and password are required"}), 400
-
-    if not name:
-        name = random.choice(_FUNNY_NAMES)
-
-    if not _EMAIL_RE.match(email):
-        return jsonify({"error": "Invalid email format"}), 400
-
-    if len(password) < 8:
-        return jsonify({"error": "Password must be at least 8 characters"}), 400
-
-    if User.query.filter_by(email=email).first():
-        return jsonify({"error": "Email already registered"}), 400
-
-    user = User(
-        name=name,
-        email=email,
-        password_hash=generate_password_hash(password)
-    )
-    db.session.add(user)
-    db.session.commit()
-
-    session['user_id'] = user.id
-    session['logged_in_at'] = datetime.utcnow().timestamp()
-    csrf_token = _generate_csrf_token()
-    return jsonify({"id": user.id, "name": user.name, "email": user.email, "isAdmin": user.is_admin, "csrfToken": csrf_token})
+@app.route("/api/validation-rules", methods=["GET"])
+def get_validation_rules():
+    """Return validation constraints for use by the frontend."""
+    return jsonify(validation_rules_dict())
 
 
-@app.route('/api/login', methods=['POST'])
-@limiter.limit("5 per minute")
-def login():
-    data = request.json or {}
-    email = (data.get('email') or '').strip().lower()
-    password = (data.get('password') or '').strip()
-
-    if not email or not password:
-        return jsonify({"error": "Email and password are required"}), 400
-
-    user = User.query.filter_by(email=email).first()
-    if user is None or not check_password_hash(user.password_hash, password):
-        return jsonify({"error": "Invalid credentials"}), 401
-
-    session['user_id'] = user.id
-    session['logged_in_at'] = datetime.utcnow().timestamp()
-    csrf_token = _generate_csrf_token()
-    return jsonify({"id": user.id, "name": user.name, "email": user.email, "isAdmin": user.is_admin, "csrfToken": csrf_token})
-
-
-@app.route('/api/logout', methods=['POST'])
-@csrf_protected
-def logout():
-    session.clear()
-    return jsonify({"message": "Logged out"})
-
-
-@app.route('/api/me', methods=['GET'])
-def me():
-    user = get_current_user()
-    if user is None:
-        return jsonify({"error": "Not authenticated"}), 401
-    csrf_token = _generate_csrf_token()
-    return jsonify({"id": user.id, "name": user.name, "email": user.email, "isAdmin": user.is_admin, "csrfToken": csrf_token})
-
-
-@app.route('/api/forgot-password', methods=['POST'])
-@limiter.limit("3 per hour", key_func=lambda: (request.json or {}).get("email", ""))
-@limiter.limit("10 per hour")
-def forgot_password():
-    data = request.json or {}
-    email = (data.get('email') or '').strip().lower()
-
-    if not email:
-        return jsonify({"error": "Email is required."}), 400
-
-    if not _EMAIL_RE.match(email):
-        return jsonify({"error": "Invalid email format."}), 400
-
-    user = User.query.filter_by(email=email).first()
-    if user:
-        raw_token = generate_token(user)
-        reset_url = f"{request.host_url}reset-password?token={raw_token}"
-        try:
-            send_password_reset_email(email, reset_url)
-        except EmailServiceError as exc:
-            app.logger.error("Failed to send reset email to %s: %s", email, exc.reason)
-            return jsonify({"error": "Failed to send reset email. Please try again later."}), 500
-
-    return jsonify({"message": "If that email is registered, a reset link has been sent."})
-
-
-@app.route('/api/reset-password/validate', methods=['GET'])
-def validate_reset_token():
-    token = request.args.get('token', '')
-    record = validate_token(token)
-    if record is not None:
-        return jsonify({"valid": True})
-    return jsonify({"error": "Invalid or expired reset link."}), 400
-
-
-@app.route('/api/reset-password', methods=['POST'])
-def reset_password():
-    data = request.json or {}
-    token = (data.get('token') or '').strip()
-    password = data.get('password') or ''
-
-    if not token:
-        return jsonify({"error": "Token is required."}), 400
-
-    if not password:
-        return jsonify({"error": "Password is required."}), 400
-
-    if len(password) < 8 or len(password) > 128:
-        return jsonify({"error": "Password must be between 8 and 128 characters."}), 400
-
-    record = validate_token(token)
-    if record is None:
-        return jsonify({"error": "Invalid or expired reset link."}), 400
-
-    try:
-        consume_token(record, password)
-    except Exception:
-        app.logger.exception("Unexpected error during password reset")
-        return jsonify({"error": "An unexpected error occurred. Please try again."}), 500
-
-    return jsonify({"message": "Your password has been reset. You may now log in."})
-
-
-@app.route('/api/status', methods=['GET'])
+@app.route("/api/status", methods=["GET"])
 @login_required
 def get_status():
     """Return quiz stats for the current user."""
     user = get_current_user()
     results = QuizResult.query.filter_by(user_id=user.id).all()
     completed = [r for r in results if not r.ongoing]
-    total_points = sum(r.hint_difficulty * r.remaining_guesses for r in completed if r.remaining_guesses > 0)
-    return jsonify({
-        "quizzesCompleted": len(completed),
-        "totalPoints": total_points,
-        "quizzesOngoing": len([r for r in results if r.ongoing]),
-    })
+    total_points = sum(
+        r.hint_difficulty * r.remaining_guesses
+        for r in completed
+        if r.remaining_guesses > 0
+    )
+    return jsonify(
+        {
+            "quizzesCompleted": len(completed),
+            "totalPoints": total_points,
+            "quizzesOngoing": len([r for r in results if r.ongoing]),
+        }
+    )
 
 
-@app.route('/api/quiz-types', methods=['GET'])
+@app.route("/api/quiz-types", methods=["GET"])
 @login_required
 def list_quiz_types():
     """Return the list of registered quiz types."""
     registry = get_registry()
-    return jsonify([
-        {"identifier": qt.identifier, "displayName": qt.display_name}
-        for qt in registry
-    ])
+    return jsonify(
+        [
+            {"identifier": qt.identifier, "displayName": qt.display_name}
+            for qt in registry
+        ]
+    )
 
 
-_IDENTIFIER_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
-
-
-@app.route('/api/rules/<quiz_type>', methods=['GET'])
+@app.route("/api/rules/<quiz_type>", methods=["GET"])
 @login_required
 def get_rules(quiz_type):
     """Return raw markdown rules content for a given quiz type."""
-    # Reject path separators
-    if '/' in quiz_type or '\\' in quiz_type:
+    if "/" in quiz_type or "\\" in quiz_type:
         return jsonify({"error": "Invalid quiz type identifier"}), 400
 
-    # Validate identifier pattern
-    if not _IDENTIFIER_PATTERN.match(quiz_type):
+    if not IDENTIFIER_PATTERN.match(quiz_type):
         return jsonify({"error": "Invalid quiz type identifier"}), 400
 
     rules_path = Path(__file__).parent / "assets" / "rules" / f"{quiz_type}.md"
@@ -403,7 +231,7 @@ def get_rules(quiz_type):
     return jsonify({"content": content})
 
 
-@app.route('/api/stats', methods=['GET'])
+@app.route("/api/stats", methods=["GET"])
 @login_required
 def get_stats():
     """Return detailed cumulative statistics for the current user."""
@@ -427,301 +255,23 @@ def get_stats():
     return jsonify(stats)
 
 
-@app.route('/api/quiz', methods=['GET'])
-@login_required
-def get_quiz():
-    """Return a random destination along with its first hint and pictures"""
-    destinations = Destination.query.all()
-    if not destinations:
-        return jsonify({"error": "No quiz data available"}), 404
-
-    random_destination = random.choice(destinations)
-    hint_difficulty = 5  # Start with the hardest hint
-    hint_text = getattr(random_destination, f"hint{hint_difficulty}", '')
-
-    # Create or reset the quiz result to track server-side state
-    user = get_current_user()
-    # End any previously active quiz
-    QuizResult.query.filter_by(user_id=user.id, ongoing=True).update({"ongoing": False})
-    quiz_result = QuizResult.query.filter_by(user_id=user.id, destination_id=random_destination.id).first()
-    if quiz_result is None:
-        quiz_result = QuizResult(user_id=user.id, destination_id=random_destination.id)
-    quiz_result.hint_difficulty = hint_difficulty
-    quiz_result.remaining_guesses = 3
-    quiz_result.ongoing = True
-    db.session.add(quiz_result)
-    db.session.commit()
-
-    return jsonify({
-        "id": random_destination.id,
-        "hint": hint_text,
-        "hintDifficulty": hint_difficulty,
-        "remainingGuesses": 3,
-        "images": [
-            f"/media/countries/{random_destination.id}/{hint_difficulty}a.jpg",
-            f"/media/countries/{random_destination.id}/{hint_difficulty}b.jpg",
-        ]
-    })
-
-
-@app.route('/api/quiz/<int:destination_id>', methods=['GET'])
-@login_required
-def get_specific_quiz(destination_id):
-    """Return a specific destination for a quiz."""
-    destination = Destination.query.filter_by(id=destination_id).first()
-    if not destination:
-        return jsonify({"error": "Destination not found"}), 404
-
-    hint_difficulty = 5
-    hint_text = getattr(destination, f"hint{hint_difficulty}", '')
-
-    # Create or reset the quiz result to track server-side state
-    user = get_current_user()
-    # End any previously active quiz
-    QuizResult.query.filter_by(user_id=user.id, ongoing=True).update({"ongoing": False})
-    quiz_result = QuizResult.query.filter_by(user_id=user.id, destination_id=destination.id).first()
-    if quiz_result is None:
-        quiz_result = QuizResult(user_id=user.id, destination_id=destination.id)
-    quiz_result.hint_difficulty = hint_difficulty
-    quiz_result.remaining_guesses = 3
-    quiz_result.ongoing = True
-    db.session.add(quiz_result)
-    db.session.commit()
-
-    return jsonify({
-        "id": destination.id,
-        "hint": hint_text,
-        "hintDifficulty": hint_difficulty,
-        "remainingGuesses": 3,
-        "images": [
-            f"/media/countries/{destination.id}/{hint_difficulty}a.jpg",
-            f"/media/countries/{destination.id}/{hint_difficulty}b.jpg",
-        ]
-    })
-
-
-@app.route('/api/hint', methods=['GET'])
-@login_required
-def get_hint():
-    """Fetch the next hint for the user's active quiz, decrementing difficulty."""
-    user = get_current_user()
-    quiz_result = QuizResult.query.filter_by(user_id=user.id, ongoing=True).first()
-    if quiz_result is None:
-        return jsonify({"error": "No active quiz"}), 404
-
-    # Decrement hint difficulty to reveal an easier hint
-    new_difficulty = quiz_result.hint_difficulty - 1
-    if new_difficulty < 1:
-        return jsonify({"error": "No more hints remaining"}), 404
-
-    question = Destination.query.filter_by(id=quiz_result.destination_id).first()
-    if not question:
-        return jsonify({"error": "Question not found"}), 404
-
-    quiz_result.hint_difficulty = new_difficulty
-    db.session.commit()
-
-    hint_text = getattr(question, f"hint{new_difficulty}", '')
-    return jsonify({
-        "hint": hint_text,
-        "hintDifficulty": new_difficulty,
-        "remainingGuesses": quiz_result.remaining_guesses
-    })
-
-
-@app.route('/api/check-answer', methods=['POST'])
-@login_required
-def check_answer():
-    """Check if the answer is correct, using server-side state for scoring."""
-    data = request.json or {}
-    user_answer = (data.get('answer') or '').lower().strip()
-
-    user = get_current_user()
-    quiz_result = QuizResult.query.filter_by(user_id=user.id, ongoing=True).first()
-    if quiz_result is None:
-        return jsonify({"error": "No active quiz"}), 404
-
-    question = Destination.query.filter_by(id=quiz_result.destination_id).first()
-    if not question:
-        return jsonify({"error": "Question not found"}), 404
-
-    is_correct = user_answer in question.correct_answers
-
-    if is_correct:
-        points = quiz_result.hint_difficulty * quiz_result.remaining_guesses
-        quiz_result.ongoing = False
-        db.session.commit()
-        return jsonify({
-            "correct": True,
-            "answer": question.name,
-            "points": points
-        })
-
-    # Wrong answer — decrement remaining guesses
-    quiz_result.remaining_guesses -= 1
-    if quiz_result.remaining_guesses <= 0:
-        quiz_result.ongoing = False
-        db.session.commit()
-        return jsonify({
-            "correct": False,
-            "answer": question.name,
-            "points": 0
-        })
-
-    # Still has guesses left — also reveal next hint
-    new_difficulty = quiz_result.hint_difficulty - 1
-    if new_difficulty >= 1:
-        quiz_result.hint_difficulty = new_difficulty
-
-    db.session.commit()
-
-    hint_text = getattr(question, f"hint{quiz_result.hint_difficulty}", '')
-    return jsonify({
-        "correct": False,
-        "remainingGuesses": quiz_result.remaining_guesses,
-        "hintDifficulty": quiz_result.hint_difficulty,
-        "hint": hint_text
-    })
-
-
-@app.route('/api/admin/destinations', methods=['GET'])
-@admin_required
-def list_destinations():
-    """Return all destinations ordered by ID ascending."""
-    destinations = Destination.query.order_by(Destination.id.asc()).all()
-    result = [{"id": d.id, "name": d.name} for d in destinations]
-    return jsonify({"destinations": result, "count": len(result)})
-
-
-@app.route('/api/admin/destinations/<int:destination_id>', methods=['GET'])
-@admin_required
-def get_destination(destination_id):
-    """Return full destination data by ID."""
-    destination = db.session.get(Destination, destination_id)
-    if not destination:
-        return jsonify({"error": "Destination not found"}), 404
-    return jsonify({
-        "id": destination.id,
-        "name": destination.name,
-        "hints": [
-            destination.hint1,
-            destination.hint2,
-            destination.hint3,
-            destination.hint4,
-            destination.hint5,
-        ],
-        "correct_answers": destination.correct_answers,
-    })
-
-
-@app.route('/api/admin/destinations', methods=['POST'])
-@admin_required
-@csrf_protected
-def create_destination():
-    """Create a new destination."""
-    data = request.json or {}
-
-    is_valid, errors = validate_destination_payload(data)
-    if not is_valid:
-        return jsonify({"error": "Validation failed", "details": errors}), 400
-
-    # Check for duplicate name (case-sensitive exact match)
-    existing = Destination.query.filter_by(name=data['name']).first()
-    if existing:
-        return jsonify({"error": "A destination with this name already exists"}), 409
-
-    # Store hints as hint1–hint5 columns
-    hints = data['hints']
-    normalized = normalize_answers(data['correct_answers'])
-
-    destination = Destination(
-        name=data['name'],
-        hint1=hints[0],
-        hint2=hints[1],
-        hint3=hints[2],
-        hint4=hints[3],
-        hint5=hints[4],
-        correct_answers=normalized,
-    )
-    db.session.add(destination)
-    db.session.commit()
-
-    return jsonify({"id": destination.id}), 201
-
-
-@app.route('/api/admin/destinations/<int:destination_id>', methods=['DELETE'])
-@admin_required
-@csrf_protected
-def delete_destination(destination_id):
-    """Delete a destination and cascade to associated quiz results."""
-    destination = db.session.get(Destination, destination_id)
-    if not destination:
-        return jsonify({"error": "Destination not found"}), 404
-    db.session.delete(destination)
-    db.session.commit()
-    return jsonify({"message": "Destination deleted"}), 200
-
-
-@app.route('/api/admin/destinations/<int:destination_id>', methods=['PUT'])
-@admin_required
-@csrf_protected
-def update_destination(destination_id):
-    """Update (replace) all fields of an existing destination."""
-    destination = db.session.get(Destination, destination_id)
-    if not destination:
-        return jsonify({"error": "Destination not found"}), 404
-
-    data = request.json or {}
-
-    is_valid, errors = validate_destination_payload(data)
-    if not is_valid:
-        return jsonify({"error": "Validation failed", "details": errors}), 400
-
-    # Replace all fields with submitted values
-    hints = data['hints']
-    normalized = normalize_answers(data['correct_answers'])
-
-    destination.name = data['name']
-    destination.hint1 = hints[0]
-    destination.hint2 = hints[1]
-    destination.hint3 = hints[2]
-    destination.hint4 = hints[3]
-    destination.hint5 = hints[4]
-    destination.correct_answers = normalized
-
-    db.session.commit()
-
-    return jsonify({
-        "id": destination.id,
-        "name": destination.name,
-        "hints": [
-            destination.hint1,
-            destination.hint2,
-            destination.hint3,
-            destination.hint4,
-            destination.hint5,
-        ],
-        "correct_answers": destination.correct_answers,
-    })
-
-
-@app.route('/reset-password')
+@app.route("/reset-password")
 def reset_password_page():
     """Serve the password reset form page."""
-    return send_from_directory(STATIC_DIR, 'reset_password.html')
+    return send_from_directory(STATIC_DIR, "reset_password.html")
 
 
-@app.route('/')
+@app.route("/")
 def index():
-    """Serve the main page"""
-    return send_from_directory(STATIC_DIR, 'index.html')
+    """Serve the main page."""
+    return send_from_directory(STATIC_DIR, "index.html")
 
 
-@app.route('/media/<path:filename>')
+@app.route("/media/<path:filename>")
 def serve_media(filename):
     """Serve quiz images from the media directory."""
     return send_from_directory(MEDIA_DIR, filename)
 
 
-if __name__ == '__main__':
-    app.run(debug=False, port=5000, host='0.0.0.0')
+if __name__ == "__main__":
+    app.run(debug=False, port=5000, host="0.0.0.0")
