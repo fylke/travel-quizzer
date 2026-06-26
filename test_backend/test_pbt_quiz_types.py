@@ -197,7 +197,6 @@ class PropertyTestRulesContentRoundTrip(unittest.TestCase):
         app.testing = True
         self.app = app
         self.client = app.test_client()
-        self._created_files: list[str] = []
 
         # Set up an in-memory database with a test user for authentication
         app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
@@ -220,24 +219,7 @@ class PropertyTestRulesContentRoundTrip(unittest.TestCase):
         assert resp.status_code == 200
 
     def tearDown(self):
-        """Remove any temp rules files created during tests."""
-        for path in self._created_files:
-            try:
-                os.remove(path)
-            except OSError:
-                pass
-
-    def _write_rules_file(self, quiz_type: str, content: str) -> str:
-        """Write content to a rules file and track it for cleanup."""
-        rules_dir = os.path.join(
-            os.path.dirname(__file__), "..", "backend", "assets", "rules"
-        )
-        filepath = os.path.join(rules_dir, f"{quiz_type}.md")
-        filepath = os.path.abspath(filepath)
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(content)
-        self._created_files.append(filepath)
-        return filepath
+        pass
 
     @settings(max_examples=8, deadline=5000)
     @given(content=st.text(alphabet=st.characters(categories=("L", "M", "N", "P", "S", "Z")), min_size=0, max_size=500))
@@ -248,39 +230,40 @@ class PropertyTestRulesContentRoundTrip(unittest.TestCase):
         # Feature: quiz-type-selection, Property 3: Rules content round-trip preservation
         **Validates: Requirements 3.4**
         """
-        # Use a fixed valid quiz type identifier for the temp file
+        import tempfile
+        from pathlib import Path as RealPath
+        from unittest.mock import MagicMock
+
         quiz_type = "pbttest"
 
-        # Write content to a temp rules file
-        self._write_rules_file(quiz_type, content)
+        # Write content to a temp file (not in the source tree)
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".md", encoding="utf-8", delete=False
+        ) as f:
+            f.write(content)
+            tmp_path = f.name
 
         try:
-            # Fetch via the API
-            response = self.client.get(f"/api/rules/{quiz_type}")
-            self.assertEqual(response.status_code, 200)
-
-            data = response.get_json()
-            self.assertIn("content", data)
-
-            # Assert byte-for-byte identity
-            self.assertEqual(data["content"], content)
-        finally:
-            # Clean up the file immediately so it doesn't interfere with next example
-            filepath = os.path.join(
-                os.path.dirname(__file__),
-                "..",
-                "backend",
-                "assets",
-                "rules",
-                f"{quiz_type}.md",
+            # Create a mock Path that chains correctly and ends at our temp file
+            fake_rules_path = RealPath(tmp_path)
+            mock_parent = MagicMock()
+            mock_parent.__truediv__ = lambda self_, x: (
+                MagicMock(__truediv__=lambda self2_, y: (
+                    MagicMock(__truediv__=lambda self3_, z: fake_rules_path)
+                ))
             )
-            filepath = os.path.abspath(filepath)
-            try:
-                os.remove(filepath)
-            except OSError:
-                pass
-            if filepath in self._created_files:
-                self._created_files.remove(filepath)
+
+            with patch("backend.Path") as mock_path:
+                mock_path.return_value.parent = mock_parent
+
+                response = self.client.get(f"/api/rules/{quiz_type}")
+        finally:
+            os.unlink(tmp_path)
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("content", data)
+        self.assertEqual(data["content"], content)
 
 
 if __name__ == "__main__":
