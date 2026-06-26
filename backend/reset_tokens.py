@@ -2,11 +2,16 @@
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from werkzeug.security import generate_password_hash
 
 from .models import PasswordResetToken, db
+
+
+def _utcnow() -> datetime:
+    """Return current UTC time as a naive datetime (for DB storage/comparison)."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def generate_token(user) -> str:
@@ -20,7 +25,7 @@ def generate_token(user) -> str:
     # Invalidate all existing unused tokens for this user
     PasswordResetToken.query.filter_by(user_id=user.id, consumed=False).delete()
 
-    now = datetime.utcnow()
+    now = _utcnow()
     token_record = PasswordResetToken(
         user_id=user.id,
         token_hash=token_hash,
@@ -47,7 +52,7 @@ def validate_token(raw_token: str) -> "PasswordResetToken | None":
     ).first()
     if record is None:
         return None
-    if record.expires_at < datetime.utcnow():
+    if record.expires_at < _utcnow():
         return None
     return record
 
@@ -61,6 +66,6 @@ def consume_token(token_record: "PasswordResetToken", new_password: str) -> None
     """
     user = token_record.user
     user.password_hash = generate_password_hash(new_password)
-    user.password_changed_at = datetime.utcnow()
+    user.password_changed_at = _utcnow()
     token_record.consumed = True
     db.session.commit()

@@ -1,8 +1,8 @@
-"""Validation rules shared between backend and frontend.
+"""Validation rules and game constants shared across the application.
 
 This module is the single source of truth for all input validation
-constraints. The frontend fetches these values via /api/validation-rules
-so they never drift out of sync.
+constraints and gameplay parameters. The frontend fetches the validation
+values via /api/validation-rules so they never drift out of sync.
 """
 
 # --- Password ---
@@ -24,6 +24,10 @@ IMAGES_MAX_COUNT = 10
 ANSWERS_MIN_COUNT = 1
 ANSWERS_MAX_COUNT = 20
 ANSWER_MAX_LENGTH = 128
+
+# --- Gameplay ---
+STARTING_HINT_DIFFICULTY = 5
+MAX_GUESSES = 3
 
 
 def as_dict() -> dict:

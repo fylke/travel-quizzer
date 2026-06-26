@@ -1,7 +1,7 @@
 """Authentication and CSRF utilities shared across blueprints."""
 
 import secrets
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import wraps
 
 from flask import jsonify, request, session
@@ -45,8 +45,13 @@ def get_current_user():
     if user is None:
         return None
     if user.password_changed_at is not None:
-        logged_in_at = session.get("logged_in_at", 0)
-        if logged_in_at < user.password_changed_at.timestamp():
+        logged_in_at_str = session.get("logged_in_at")
+        if not logged_in_at_str:
+            return None
+        logged_in_at = datetime.fromisoformat(logged_in_at_str)
+        # password_changed_at is naive UTC from the DB — make it aware for comparison
+        changed_at = user.password_changed_at.replace(tzinfo=UTC)
+        if logged_in_at < changed_at:
             return None
     return user
 
@@ -90,4 +95,4 @@ def user_response(user):
 def login_user_session(user):
     """Set session fields for a logged-in user."""
     session["user_id"] = user.id
-    session["logged_in_at"] = datetime.utcnow().timestamp()
+    session["logged_in_at"] = datetime.now(UTC).isoformat()

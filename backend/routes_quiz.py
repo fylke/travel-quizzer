@@ -6,11 +6,9 @@ from flask import Blueprint, jsonify, request
 
 from .auth import get_current_user, login_required
 from .models import Destination, QuizResult, db
+from .validation_rules import MAX_GUESSES, STARTING_HINT_DIFFICULTY
 
 quiz_bp = Blueprint("quiz", __name__)
-
-STARTING_HINT_DIFFICULTY = 5
-MAX_GUESSES = 3
 
 
 def _start_quiz(user, destination):
