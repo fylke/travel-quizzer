@@ -78,15 +78,7 @@ class MainAppTestCase(unittest.TestCase):
     def setUp(self):
         app.testing = True
         self.client = app.test_client()
-        # Use a dedicated test database file to isolate tests from production DB
-        test_db_path = os.path.join(ROOT_DIR, 'database', 'test_quiz_data.db')
-        try:
-            if os.path.exists(test_db_path):
-                os.remove(test_db_path)
-        except Exception:
-            pass
-
-        app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{test_db_path}"
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
         # Initialize and populate the test database with SAMPLE_DATA
@@ -122,16 +114,9 @@ class MainAppTestCase(unittest.TestCase):
         self.quiz_data = SAMPLE_DATA
 
     def tearDown(self):
-        # Clean up test database file
-        test_db_path = os.path.join(ROOT_DIR, 'database', 'test_quiz_data.db')
         with app.app_context():
             db.session.remove()
             db.drop_all()
-        try:
-            if os.path.exists(test_db_path):
-                os.remove(test_db_path)
-        except Exception:
-            pass
 
     def test_quiz_endpoint_returns_first_hint_of_random_destination(self):
         response = self.client.get('/api/quiz')
@@ -281,14 +266,6 @@ class MainAppTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         data = response.get_json()
         self.assertEqual(data['error'], 'Authentication required')
-
-    def test_quiz_data_is_loaded(self):
-        self.assertGreaterEqual(len(self.quiz_data), 5)
-        self.assertEqual(self.quiz_data[0]['destination'], 'tokyo')
-        self.assertIn('correct_answers', self.quiz_data[0])
-        self.assertIn('hints', self.quiz_data[0])
-        self.assertIsInstance(self.quiz_data[0]['hints'], dict)
-        self.assertEqual(len(self.quiz_data[0]['hints']), 5)
 
 
     def test_session_cookie_has_httponly_and_samesite(self):

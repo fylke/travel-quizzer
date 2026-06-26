@@ -14,14 +14,7 @@ class AdminAPITestCase(unittest.TestCase):
     def setUp(self):
         app.testing = True
         self.client = app.test_client()
-        self.test_db_path = os.path.join(ROOT_DIR, 'database', 'test_admin_api.db')
-        try:
-            if os.path.exists(self.test_db_path):
-                os.remove(self.test_db_path)
-        except Exception:
-            pass
-
-        app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{self.test_db_path}"
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
         with app.app_context():
@@ -50,11 +43,6 @@ class AdminAPITestCase(unittest.TestCase):
         with app.app_context():
             db.session.remove()
             db.drop_all()
-        try:
-            if os.path.exists(self.test_db_path):
-                os.remove(self.test_db_path)
-        except Exception:
-            pass
 
     # --- Helpers ---
 
