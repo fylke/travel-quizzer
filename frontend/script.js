@@ -780,6 +780,10 @@ async function saveDestination() {
             return;
         }
     }
+    if (images.length < 2) {
+        showAdminError('At least 2 image URLs are required');
+        return;
+    }
     if (images.length > 10) {
         showAdminError('No more than 10 image URLs are allowed');
         return;
