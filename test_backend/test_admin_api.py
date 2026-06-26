@@ -81,7 +81,7 @@ class AdminAPITestCase(unittest.TestCase):
                                 headers={'X-CSRF-Token': csrf_token})
 
     # =====================================================================
-    # AUTH TESTS - GET /api/admin/destinations
+    # AUTH TESTS - Representative check (decorator tested in test_admin_auth.py)
     # =====================================================================
 
     def test_list_returns_401_unauthenticated(self):
@@ -94,77 +94,6 @@ class AdminAPITestCase(unittest.TestCase):
         """GET /api/admin/destinations returns 403 for non-admin user."""
         self._login_regular()
         response = self.client.get('/api/admin/destinations')
-        self.assertEqual(response.status_code, 403)
-
-    # =====================================================================
-    # AUTH TESTS - GET /api/admin/destinations/<id>
-    # =====================================================================
-
-    def test_get_returns_401_unauthenticated(self):
-        """GET /api/admin/destinations/<id> returns 401 when not logged in."""
-        client = app.test_client()
-        response = client.get('/api/admin/destinations/1')
-        self.assertEqual(response.status_code, 401)
-
-    def test_get_returns_403_for_non_admin(self):
-        """GET /api/admin/destinations/<id> returns 403 for non-admin user."""
-        self._login_regular()
-        response = self.client.get('/api/admin/destinations/1')
-        self.assertEqual(response.status_code, 403)
-
-    # =====================================================================
-    # AUTH TESTS - POST /api/admin/destinations
-    # =====================================================================
-
-    def test_create_returns_401_unauthenticated(self):
-        """POST /api/admin/destinations returns 401 when not logged in."""
-        client = app.test_client()
-        response = client.post('/api/admin/destinations',
-                               json=self._valid_destination_payload())
-        self.assertEqual(response.status_code, 401)
-
-    def test_create_returns_403_for_non_admin(self):
-        """POST /api/admin/destinations returns 403 for non-admin user."""
-        csrf = self._login_regular()
-        response = self.client.post('/api/admin/destinations',
-                                    json=self._valid_destination_payload(),
-                                    headers={'X-CSRF-Token': csrf})
-        self.assertEqual(response.status_code, 403)
-
-    # =====================================================================
-    # AUTH TESTS - PUT /api/admin/destinations/<id>
-    # =====================================================================
-
-    def test_update_returns_401_unauthenticated(self):
-        """PUT /api/admin/destinations/<id> returns 401 when not logged in."""
-        client = app.test_client()
-        response = client.put('/api/admin/destinations/1',
-                              json=self._valid_destination_payload())
-        self.assertEqual(response.status_code, 401)
-
-    def test_update_returns_403_for_non_admin(self):
-        """PUT /api/admin/destinations/<id> returns 403 for non-admin user."""
-        csrf = self._login_regular()
-        response = self.client.put('/api/admin/destinations/1',
-                                   json=self._valid_destination_payload(),
-                                   headers={'X-CSRF-Token': csrf})
-        self.assertEqual(response.status_code, 403)
-
-    # =====================================================================
-    # AUTH TESTS - DELETE /api/admin/destinations/<id>
-    # =====================================================================
-
-    def test_delete_returns_401_unauthenticated(self):
-        """DELETE /api/admin/destinations/<id> returns 401 when not logged in."""
-        client = app.test_client()
-        response = client.delete('/api/admin/destinations/1')
-        self.assertEqual(response.status_code, 401)
-
-    def test_delete_returns_403_for_non_admin(self):
-        """DELETE /api/admin/destinations/<id> returns 403 for non-admin user."""
-        csrf = self._login_regular()
-        response = self.client.delete('/api/admin/destinations/1',
-                                      headers={'X-CSRF-Token': csrf})
         self.assertEqual(response.status_code, 403)
 
     # =====================================================================
