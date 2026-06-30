@@ -87,6 +87,7 @@ def main() -> int:
         ".github/workflows/deploy-qnap.yml",
         ".github/workflows/e2e-nightly.yml",
         ".github/workflows/rollback-qnap.yml",
+        ".github/workflows/rollback-self-test.yml",
     ]:
         check_uses_pinned_shas(workflow, failures)
 

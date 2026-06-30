@@ -1,0 +1,112 @@
+name: Rollback Self-Test
+
+"on":
+  schedule:
+    - cron: "15 4 * * 1"
+  workflow_dispatch:
+
+env:
+  CONTAINER_NAME: travel-quizzer
+
+jobs:
+  self_test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Validate rollback readiness on QNAP via SSH
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
+        with:
+          host: ${{ secrets.QNAP_HOST }}
+          port: ${{ secrets.QNAP_SSH_PORT }}
+          username: ${{ secrets.QNAP_USER }}
+          key: ${{ secrets.QNAP_SSH_KEY }}
+          script: |
+            resolve_docker() {
+              if command -v docker >/dev/null 2>&1; then
+                command -v docker
+                return 0
+              fi
+              for candidate in \
+                /share/CACHEDEV2_DATA/.qpkg/container-station/bin/docker \
+                /share/CACHEDEV2_DATA/.qpkg/ContainerStation/bin/docker; do
+                if [ -x "$candidate" ]; then
+                  echo "$candidate"
+                  return 0
+                fi
+              done
+              echo "Docker CLI not found on QNAP host" >&2
+              return 1
+            }
+
+            DOCKER_BIN=$(resolve_docker)
+            CURRENT="${{ env.CONTAINER_NAME }}"
+            READY=0
+
+            if ! "$DOCKER_BIN" ps --format '{{.Names}}' | grep -Fx "$CURRENT" >/dev/null 2>&1; then
+              echo "Current container '$CURRENT' is not running." >&2
+              exit 1
+            fi
+
+            if "$DOCKER_BIN" exec "$CURRENT" python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=5)" >/dev/null 2>&1; then
+              READY=1
+            fi
+
+            if [ "$READY" -ne 1 ]; then
+              echo "Current container failed health check." >&2
+              "$DOCKER_BIN" logs --tail 60 "$CURRENT" || true
+              exit 1
+            fi
+
+            FOUND=0
+            for gen in 1 2 3; do
+              CANDIDATE="${CURRENT}-rollback-$gen"
+              if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$CANDIDATE" >/dev/null 2>&1; then
+                FOUND=1
+                if "$DOCKER_BIN" ps --format '{{.Names}}' | grep -Fx "$CANDIDATE" >/dev/null 2>&1; then
+                  echo "Rollback container $CANDIDATE should not be running." >&2
+                  exit 1
+                fi
+                IMG=$($DOCKER_BIN inspect -f '{{.Config.Image}}' "$CANDIDATE")
+                if [ -z "$IMG" ]; then
+                  echo "Rollback container $CANDIDATE has no image metadata." >&2
+                  exit 1
+                fi
+                "$DOCKER_BIN" image inspect "$IMG" >/dev/null 2>&1 || {
+                  echo "Rollback container image $IMG is missing locally." >&2
+                  exit 1
+                }
+              fi
+            done
+
+            if [ "$FOUND" -ne 1 ]; then
+              echo "No rollback generation containers found; rollback drill readiness failed." >&2
+              exit 1
+            fi
+
+            echo "Rollback self-test passed."
+
+      - name: Notify on self-test failure
+        if: failure()
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const title = `[rollback-self-test] Scheduled rollback readiness check failed`;
+            const body = [
+              `Scheduled rollback self-test failed.`,
+              '',
+              `Run URL: ${runUrl}`,
+              `Ref: ${context.ref}`,
+              `Commit: ${context.sha}`,
+              `Actor: ${context.actor}`,
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ["incident", "rollback"],
+            });
