@@ -13,10 +13,13 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      image_ref: ${{ steps.resolve-image-ref.outputs.image_ref }}
     permissions:
       contents: read
       packages: write
       security-events: write
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -75,11 +78,36 @@ jobs:
         run: |
           docker push ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
+      - name: Resolve immutable image reference
+        id: resolve-image-ref
+        run: |
+          IMAGE_REF=$(docker image inspect --format='{{index .RepoDigests 0}}' ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }})
+          if [ -z "$IMAGE_REF" ]; then
+            echo "Failed to resolve immutable image reference" >&2
+            exit 1
+          fi
+          echo "image_ref=$IMAGE_REF" >> "$GITHUB_OUTPUT"
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac
+
+      - name: Sign image with keyless Cosign
+        run: cosign sign --yes "${{ steps.resolve-image-ref.outputs.image_ref }}"
+
   deploy:
     runs-on: ubuntu-latest
     needs: build-and-push
 
     steps:
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac
+
+      - name: Verify signed image
+        run: |
+          cosign verify "${{ needs.build-and-push.outputs.image_ref }}" \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/deploy-qnap.yml@refs/tags/.*" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+
       - name: Deploy to QNAP via SSH
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
         with:
@@ -110,22 +138,34 @@ jobs:
             # Log in to GHCR
             echo "${{ secrets.QNAP_GHCR_TOKEN }}" | "$DOCKER_BIN" login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Pull the latest image
-            "$DOCKER_BIN" pull ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            # Pull the exact immutable image reference.
+            "$DOCKER_BIN" pull ${{ needs.build-and-push.outputs.image_ref }}
 
-            PREV_CONTAINER="${{ env.CONTAINER_NAME }}-previous"
+            ROLLBACK_DEPTH=3
+            rollback_name() {
+              echo "${{ env.CONTAINER_NAME }}-rollback-$1"
+            }
 
-            # Remove any stale previous container backup.
-            if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$PREV_CONTAINER" >/dev/null 2>&1; then
-              "$DOCKER_BIN" rm -f "$PREV_CONTAINER" >/dev/null 2>&1 || true
+            # Rotate rollback generations: 2->3, 1->2, current->1.
+            OLDEST=$(rollback_name "$ROLLBACK_DEPTH")
+            if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$OLDEST" >/dev/null 2>&1; then
+              "$DOCKER_BIN" rm -f "$OLDEST" >/dev/null 2>&1 || true
             fi
 
-            # Preserve current container for rollback.
-            HAS_PREV=0
+            for i in $(seq "$ROLLBACK_DEPTH" -1 2); do
+              SRC=$(rollback_name "$((i-1))")
+              DST=$(rollback_name "$i")
+              if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$SRC" >/dev/null 2>&1; then
+                "$DOCKER_BIN" rename "$SRC" "$DST"
+              fi
+            done
+
+            FIRST_ROLLBACK=$(rollback_name 1)
+            HAS_ROLLBACK=0
             if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "${{ env.CONTAINER_NAME }}" >/dev/null 2>&1; then
               "$DOCKER_BIN" stop ${{ env.CONTAINER_NAME }} >/dev/null 2>&1 || true
-              "$DOCKER_BIN" rename ${{ env.CONTAINER_NAME }} "$PREV_CONTAINER"
-              HAS_PREV=1
+              "$DOCKER_BIN" rename ${{ env.CONTAINER_NAME }} "$FIRST_ROLLBACK"
+              HAS_ROLLBACK=1
             fi
 
             # Run the new container
@@ -148,7 +188,7 @@ jobs:
               -v /share/Container/travel-quizzer/data:/app/data:ro \
               -v /share/Container/travel-quizzer/media:/app/media:ro \
               -e SECRET_KEY="${{ secrets.FLASK_SECRET_KEY }}" \
-              ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+              ${{ needs.build-and-push.outputs.image_ref }}
 
             # Wait for app readiness using an explicit in-container probe.
             echo "Waiting for container to become ready..."
@@ -170,9 +210,9 @@ jobs:
               "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health', timeout=5).read().decode('utf-8'))" || true
               "$DOCKER_BIN" rm -f ${{ env.CONTAINER_NAME }} >/dev/null 2>&1 || true
 
-              if [ "$HAS_PREV" -eq 1 ]; then
-                echo "Attempting rollback to previous container..."
-                "$DOCKER_BIN" rename "$PREV_CONTAINER" ${{ env.CONTAINER_NAME }}
+              if [ "$HAS_ROLLBACK" -eq 1 ]; then
+                echo "Attempting rollback to generation 1..."
+                "$DOCKER_BIN" rename "$FIRST_ROLLBACK" ${{ env.CONTAINER_NAME }}
                 "$DOCKER_BIN" start ${{ env.CONTAINER_NAME }}
                 if "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=5)" >/dev/null 2>&1; then
                   echo "Rollback succeeded and previous container is healthy."

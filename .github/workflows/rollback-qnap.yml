@@ -2,6 +2,16 @@ name: Rollback QNAP Deployment
 
 'on':
   workflow_dispatch:
+    inputs:
+      generation:
+        description: "Rollback generation to restore (1 is most recent)"
+        required: true
+        default: "1"
+        type: choice
+        options:
+          - "1"
+          - "2"
+          - "3"
 
 env:
   CONTAINER_NAME: travel-quizzer
@@ -37,19 +47,26 @@ jobs:
             }
 
             DOCKER_BIN=$(resolve_docker)
-            PREV_CONTAINER="${{ env.CONTAINER_NAME }}-previous"
+            ROLLBACK_DEPTH=3
+            GEN=${{ inputs.generation }}
+            SOURCE_CONTAINER="${{ env.CONTAINER_NAME }}-rollback-$GEN"
+            CURRENT_BACKUP="${{ env.CONTAINER_NAME }}-rollback-current"
 
-            if ! "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$PREV_CONTAINER" >/dev/null 2>&1; then
-              echo "No previous container named $PREV_CONTAINER found."
+            if ! "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$SOURCE_CONTAINER" >/dev/null 2>&1; then
+              echo "No rollback generation found for $SOURCE_CONTAINER."
               exit 1
+            fi
+
+            if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$CURRENT_BACKUP" >/dev/null 2>&1; then
+              "$DOCKER_BIN" rm -f "$CURRENT_BACKUP" >/dev/null 2>&1 || true
             fi
 
             if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "${{ env.CONTAINER_NAME }}" >/dev/null 2>&1; then
               "$DOCKER_BIN" stop ${{ env.CONTAINER_NAME }} >/dev/null 2>&1 || true
-              "$DOCKER_BIN" rm ${{ env.CONTAINER_NAME }} >/dev/null 2>&1 || true
+              "$DOCKER_BIN" rename ${{ env.CONTAINER_NAME }} "$CURRENT_BACKUP"
             fi
 
-            "$DOCKER_BIN" rename "$PREV_CONTAINER" ${{ env.CONTAINER_NAME }}
+            "$DOCKER_BIN" rename "$SOURCE_CONTAINER" ${{ env.CONTAINER_NAME }}
             "$DOCKER_BIN" start ${{ env.CONTAINER_NAME }}
 
             echo "Waiting for rolled-back container to become ready..."
@@ -66,7 +83,32 @@ jobs:
             if [ "$READY" -ne 1 ]; then
               echo "Rollback container did not become ready within timeout."
               "$DOCKER_BIN" logs --tail 80 ${{ env.CONTAINER_NAME }}
+
+              # Restore original current container if rollback failed.
+              "$DOCKER_BIN" rm -f ${{ env.CONTAINER_NAME }} >/dev/null 2>&1 || true
+              if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$CURRENT_BACKUP" >/dev/null 2>&1; then
+                "$DOCKER_BIN" rename "$CURRENT_BACKUP" ${{ env.CONTAINER_NAME }}
+                "$DOCKER_BIN" start ${{ env.CONTAINER_NAME }} >/dev/null 2>&1 || true
+              fi
               exit 1
+            fi
+
+            # Reinsert the displaced container as generation 1 and shift older backups.
+            if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$CURRENT_BACKUP" >/dev/null 2>&1; then
+              OLDEST="${{ env.CONTAINER_NAME }}-rollback-$ROLLBACK_DEPTH"
+              if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$OLDEST" >/dev/null 2>&1; then
+                "$DOCKER_BIN" rm -f "$OLDEST" >/dev/null 2>&1 || true
+              fi
+
+              for i in $(seq "$ROLLBACK_DEPTH" -1 2); do
+                SRC="${{ env.CONTAINER_NAME }}-rollback-$((i-1))"
+                DST="${{ env.CONTAINER_NAME }}-rollback-$i"
+                if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$SRC" >/dev/null 2>&1; then
+                  "$DOCKER_BIN" rename "$SRC" "$DST"
+                fi
+              done
+
+              "$DOCKER_BIN" rename "$CURRENT_BACKUP" "${{ env.CONTAINER_NAME }}-rollback-1"
             fi
 
             echo "Rollback completed successfully."
