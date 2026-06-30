@@ -29,6 +29,14 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    pids_limit: 200
+    mem_limit: 512m
+    cpus: 1.0
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 2048
+      nproc: 256
     networks:
       - travel-quizzer-net
     restart: unless-stopped

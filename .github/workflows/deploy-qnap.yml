@@ -29,9 +29,7 @@ jobs:
           file: ./Containerfile
           load: true
           push: false
-          tags: |
-            ${{ env.IMAGE_NAME }}:latest
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Generate Trivy SARIF report
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
@@ -76,7 +74,6 @@ jobs:
       - name: Push scanned image tags
         run: |
           docker push ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          docker push ${{ env.IMAGE_NAME }}:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -141,6 +138,11 @@ jobs:
               --security-opt no-new-privileges:true \
               --cap-drop ALL \
               --pids-limit 200 \
+              --memory 512m \
+              --memory-swap 512m \
+              --cpus 1.0 \
+              --ulimit nofile=1024:2048 \
+              --ulimit nproc=256 \
               -p 9696:5000 \
               -v /share/Container/travel-quizzer/database:/app/database \
               -v /share/Container/travel-quizzer/data:/app/data:ro \
