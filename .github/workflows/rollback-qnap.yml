@@ -19,6 +19,9 @@ env:
 jobs:
   rollback:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
 
     steps:
       - name: Roll back to previous container via SSH
@@ -112,3 +115,25 @@ jobs:
             fi
 
             echo "Rollback completed successfully."
+
+      - name: Notify on rollback failure
+        if: failure()
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const title = `[rollback] QNAP rollback failed (generation ${{ inputs.generation }})`;
+            const body = [
+              `Manual rollback workflow failed for generation ${{ inputs.generation }}.`,
+              '',
+              `Run URL: ${runUrl}`,
+              `Commit: ${context.sha}`,
+              `Actor: ${context.actor}`,
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['incident', 'rollback'],
+            });

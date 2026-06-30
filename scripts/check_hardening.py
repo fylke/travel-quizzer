@@ -70,8 +70,17 @@ def main() -> int:
         "X-Frame-Options",
         "Referrer-Policy",
         "Permissions-Policy",
+        "CORS_ALLOWED_ORIGINS must be explicitly set in production",
     ]:
         assert_contains(backend, header, "backend/__init__.py", failures)
+
+    ci_workflow = read_text(".github/workflows/ci.yml")
+    assert_contains(
+        ci_workflow,
+        "gitleaks/gitleaks-action@",
+        ".github/workflows/ci.yml",
+        failures,
+    )
 
     for workflow in [
         ".github/workflows/ci.yml",
