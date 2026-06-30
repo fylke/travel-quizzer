@@ -7,6 +7,7 @@ on:
 
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IMAGE_TAG: ${{ github.sha }}
   CONTAINER_NAME: travel-quizzer
 
 jobs:
@@ -18,17 +19,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push container image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
           context: .
           file: ./Containerfile
@@ -37,13 +38,26 @@ jobs:
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          format: table
+          vuln-type: os,library
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+
   deploy:
     runs-on: ubuntu-latest
     needs: build-and-push
 
     steps:
       - name: Deploy to QNAP via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
         with:
           host: ${{ secrets.QNAP_HOST }}
           port: ${{ secrets.QNAP_SSH_PORT }}
@@ -73,22 +87,39 @@ jobs:
             echo "${{ secrets.QNAP_GHCR_TOKEN }}" | "$DOCKER_BIN" login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Pull the latest image
-            "$DOCKER_BIN" pull ${{ env.IMAGE_NAME }}:latest
+            "$DOCKER_BIN" pull ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
-            # Stop and remove existing container (if running)
-            "$DOCKER_BIN" stop ${{ env.CONTAINER_NAME }} 2>/dev/null || true
-            "$DOCKER_BIN" rm ${{ env.CONTAINER_NAME }} 2>/dev/null || true
+            PREV_CONTAINER="${{ env.CONTAINER_NAME }}-previous"
+
+            # Remove any stale previous container backup.
+            if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$PREV_CONTAINER" >/dev/null 2>&1; then
+              "$DOCKER_BIN" rm -f "$PREV_CONTAINER" >/dev/null 2>&1 || true
+            fi
+
+            # Preserve current container for rollback.
+            HAS_PREV=0
+            if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "${{ env.CONTAINER_NAME }}" >/dev/null 2>&1; then
+              "$DOCKER_BIN" stop ${{ env.CONTAINER_NAME }} >/dev/null 2>&1 || true
+              "$DOCKER_BIN" rename ${{ env.CONTAINER_NAME }} "$PREV_CONTAINER"
+              HAS_PREV=1
+            fi
 
             # Run the new container
             "$DOCKER_BIN" run -d \
               --name ${{ env.CONTAINER_NAME }} \
               --restart unless-stopped \
+              --user 10001:10001 \
+              --read-only \
+              --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+              --security-opt no-new-privileges:true \
+              --cap-drop ALL \
+              --pids-limit 200 \
               -p 9696:5000 \
               -v /share/Container/travel-quizzer/database:/app/database \
               -v /share/Container/travel-quizzer/data:/app/data:ro \
               -v /share/Container/travel-quizzer/media:/app/media:ro \
               -e SECRET_KEY="${{ secrets.FLASK_SECRET_KEY }}" \
-              ${{ env.IMAGE_NAME }}:latest
+              ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
             # Wait for app readiness using an explicit in-container probe.
             echo "Waiting for container to become ready..."
@@ -108,11 +139,23 @@ jobs:
               "$DOCKER_BIN" logs --tail 60 ${{ env.CONTAINER_NAME }}
               echo "Manual health probe output:"
               "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health', timeout=5).read().decode('utf-8'))" || true
+              "$DOCKER_BIN" rm -f ${{ env.CONTAINER_NAME }} >/dev/null 2>&1 || true
+
+              if [ "$HAS_PREV" -eq 1 ]; then
+                echo "Attempting rollback to previous container..."
+                "$DOCKER_BIN" rename "$PREV_CONTAINER" ${{ env.CONTAINER_NAME }}
+                "$DOCKER_BIN" start ${{ env.CONTAINER_NAME }}
+                if "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=5)" >/dev/null 2>&1; then
+                  echo "Rollback succeeded and previous container is healthy."
+                else
+                  echo "Rollback container started, but health probe failed."
+                fi
+              fi
               exit 1
             fi
 
       - name: Seed database
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
         with:
           host: ${{ secrets.QNAP_HOST }}
           port: ${{ secrets.QNAP_SSH_PORT }}
@@ -137,10 +180,10 @@ jobs:
             }
 
             DOCKER_BIN=$(resolve_docker)
-            "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} uv run --no-project python -m scripts.seed_db
+            "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} /app/.venv/bin/python -m scripts.seed_db
 
       - name: Verify deployment
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
         with:
           host: ${{ secrets.QNAP_HOST }}
           port: ${{ secrets.QNAP_SSH_PORT }}

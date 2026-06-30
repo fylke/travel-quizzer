@@ -1,11 +1,15 @@
-# Use official Python runtime as base image
-FROM python:3.11-slim
+# Use immutable image references for supply-chain safety
+FROM python:3.11-slim@sha256:b27df5841f3355e9473f9a516d38a6783b6c8dfeacaf2d14a240f443b368ddb6
 
 # Set working directory in container
 WORKDIR /app
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Safer Python runtime defaults for containers
+ENV PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONUNBUFFERED=1
+
+# Install uv from an immutable image reference
+COPY --from=ghcr.io/astral-sh/uv@sha256:3d868e555f8f1dbc324afa005066cd11e1053fc4743b9808ca8025283e65efa5 /uv /uvx /bin/
 
 # Copy dependency files
 COPY pyproject.toml uv.lock ./
@@ -13,10 +17,20 @@ COPY pyproject.toml uv.lock ./
 # Install production dependencies
 RUN uv sync --frozen --no-dev --no-install-project
 
+# Create runtime directories used by bind mounts/temp files
+RUN mkdir -p /app/database /tmp
+
+# Create unprivileged runtime identity
+RUN groupadd --gid 10001 app && useradd --uid 10001 --gid app --no-create-home --home-dir /app --shell /usr/sbin/nologin app
+
 # Copy application code and static files
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
 COPY scripts/ ./scripts/
+
+RUN chown -R 10001:10001 /app
+
+USER 10001:10001
 
 # Expose port 5000
 EXPOSE 5000
