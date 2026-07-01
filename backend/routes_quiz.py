@@ -2,13 +2,15 @@
 
 import os
 import random
+import re
 from pathlib import Path
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from .auth import get_current_user, login_required
+from .email_service import EmailServiceError, send_hint_complaint_email
 from .models import Destination, QuizResult, db
-from .validation_rules import MAX_GUESSES, STARTING_HINT_DIFFICULTY
+from .validation_rules import HINT_COUNT, MAX_GUESSES, STARTING_HINT_DIFFICULTY
 
 quiz_bp = Blueprint("quiz", __name__)
 
@@ -16,6 +18,7 @@ quiz_bp = Blueprint("quiz", __name__)
 RESULT_IMAGE_PREFIX = "0"
 RESULT_IMAGE_MAX_COUNT = 10
 RESULT_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def _media_root() -> Path:
@@ -202,3 +205,70 @@ def check_answer():
             "hint": hint_text,
         }
     )
+
+
+@quiz_bp.route("/api/hint-complaint", methods=["POST"])
+@login_required
+def submit_hint_complaint():
+    """Submit a hint complaint to admin email for the active quiz."""
+    data = request.json or {}
+
+    try:
+        quiz_id = int(data.get("quizId"))
+        hint_difficulty = int(data.get("hintDifficulty"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "quizId and hintDifficulty must be integers."}), 400
+
+    complaint_message = (data.get("message") or "").strip()
+    complainer_email = (data.get("complainerEmail") or "").strip().lower()
+    if not complainer_email:
+        return jsonify({"error": "complainerEmail is required."}), 400
+    if not EMAIL_RE.match(complainer_email):
+        return jsonify({"error": "Invalid complainerEmail format."}), 400
+
+    if not complaint_message:
+        return jsonify({"error": "Complaint message is required."}), 400
+    if len(complaint_message) > 2000:
+        return jsonify({"error": "Complaint message is too long."}), 400
+
+    user = get_current_user()
+    quiz_result = QuizResult.query.filter_by(user_id=user.id, ongoing=True).first()
+    if quiz_result is None:
+        return jsonify({"error": "No active quiz"}), 404
+
+    if quiz_result.destination_id != quiz_id:
+        return jsonify({"error": "quizId does not match active quiz."}), 400
+
+    if not (1 <= hint_difficulty <= HINT_COUNT):
+        return jsonify({"error": "hintDifficulty is out of range."}), 400
+
+    # Users can only complain about hints they have already unlocked.
+    if hint_difficulty < quiz_result.hint_difficulty:
+        return jsonify({"error": "Hint level has not been unlocked yet."}), 400
+
+    question = Destination.query.filter_by(id=quiz_result.destination_id).first()
+    if not question:
+        return jsonify({"error": "Question not found"}), 404
+
+    admin_email = (os.environ.get("ADMIN_EMAIL") or "").strip()
+
+    hint_text = getattr(question, f"hint{hint_difficulty}", "")
+    try:
+        send_hint_complaint_email(
+            admin_address=admin_email,
+            reporter_email=complainer_email,
+            reporter_name=user.name,
+            quiz_id=quiz_id,
+            hint_difficulty=hint_difficulty,
+            hint_text=hint_text,
+            message=complaint_message,
+        )
+    except EmailServiceError as exc:
+        current_app.logger.error(
+            "Failed to send hint complaint email for quiz %s: %s",
+            quiz_id,
+            exc.reason,
+        )
+        return jsonify({"error": "Failed to send complaint email."}), 500
+
+    return jsonify({"message": "Complaint sent."})

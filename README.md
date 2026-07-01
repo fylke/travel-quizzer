@@ -118,6 +118,7 @@ uv run e2e-test
 | `SMTP_PASSWORD`     | SMTP authentication password                                                    | `app-password`                    |
 | `SMTP_FROM_ADDRESS` | Sender address for outgoing emails                                              | `noreply@travelquizzer.com`       |
 | `SMTP_USE_TLS`      | Use TLS for SMTP connection (`"true"` enables, any other value uses plain SMTP) | `true`                            |
+| `ADMIN_EMAIL`       | Destination address for hint complaint emails                                   | _(none)_                          |
 
 ## Technologies Used
 

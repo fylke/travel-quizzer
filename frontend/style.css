@@ -300,6 +300,64 @@ body {
     height: 250px;
     object-fit: cover;
     display: block;
+
+.hint-review {
+    margin-bottom: 16px;
+}
+
+.hint-review.hidden {
+    display: none;
+}
+
+.hint-review-label {
+    display: block;
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.hint-history-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.hint-history-btn {
+    border: 1px solid #d0d0d0;
+    background: #fafafa;
+    color: #444;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.hint-history-btn:hover {
+    background: #f0f4ff;
+    border-color: #667eea;
+    color: #2b3f97;
+}
+
+.hint-history-btn.active {
+    background: #667eea;
+    border-color: #667eea;
+    color: #fff;
+}
+
+.hint-complaint-link-wrap {
+    margin-bottom: 16px;
+}
+
+.hint-complaint-link-wrap a {
+    color: #667eea;
+    font-size: 0.9em;
+    text-decoration: none;
+}
+
+.hint-complaint-link-wrap a:hover {
+    text-decoration: underline;
+}
 }
 
 @media (max-width: 600px) {
@@ -949,6 +1007,28 @@ body {
 .modal-form-group input:focus {
     outline: none;
     border-color: #667eea;
+}
+
+.modal-form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95em;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 120px;
+}
+
+.modal-form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.hint-complaint-context {
+    color: #555;
+    font-size: 0.9em;
+    margin-bottom: 14px;
 }
 
 .inline-error {
