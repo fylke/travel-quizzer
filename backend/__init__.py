@@ -35,15 +35,6 @@ app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="/static")
 MEDIA_DIR = os.environ.get("MEDIA_DIR", os.path.join(PROJECT_ROOT, "media"))
 
 # Restrict CORS to the app's own origin in production; allow all in dev.
-<<<<<<< HEAD
-_cors_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "*")
-CORS(app, origins=_cors_origins.split(","), supports_credentials=True)
-
-_secret_key = os.environ.get("SECRET_KEY")
-if not _secret_key:
-    _env = os.environ.get("FLASK_ENV", "development")
-    if _env == "production":
-=======
 _env = os.environ.get('FLASK_ENV', 'development')
 _cors_origins_raw = os.environ.get('CORS_ALLOWED_ORIGINS', '*').strip()
 if _env == 'production' and (_cors_origins_raw == '*' or not _cors_origins_raw):
@@ -59,7 +50,6 @@ if not _secret_key:
     import logging as _logging
 
     if _env == 'production':
->>>>>>> c299ada (Enforce prod CORS and add security notifications)
         raise RuntimeError(
             "SECRET_KEY environment variable must be set in production. "
             "Refusing to start with an insecure default."
