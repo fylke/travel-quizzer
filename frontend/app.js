@@ -1,6 +1,12 @@
 // Quiz State — only tracks the authenticated user; all quiz progress lives on the backend.
 let quizState = {
-    user: null
+    user: null,
+    currentQuizId: null,
+    hintHistory: {},
+    unlockedHintDifficulties: [],
+    liveHintDifficulty: null,
+    liveRemainingGuesses: null,
+    viewedHintDifficulty: null
 };
 
 let csrfToken = null;
@@ -251,7 +257,8 @@ async function logout() {
 function displayQuiz(data) {
     submitting = false;
     document.getElementById('progressFill').style.width = '100%';
-    document.getElementById('hint').textContent = data.hint;
+    resetHintReviewState();
+    quizState.currentQuizId = Number(data.id) || null;
     updateHintDisplay(data.hint, data.hintDifficulty, data.remainingGuesses);
     document.getElementById('image1').src = data.images[0];
     document.getElementById('image2').src = data.images[1];
@@ -277,10 +284,116 @@ async function loadQuestion() {
 }
 
 function updateHintDisplay(hintText, hintDifficulty, remainingGuesses) {
-    const potentialPoints = hintDifficulty * remainingGuesses;
+    const difficulty = Number(hintDifficulty);
+    const guesses = Number(remainingGuesses);
 
-    document.getElementById('hint').textContent = hintText;
-    document.getElementById('hintProgress').textContent = `Hint difficulty is ${hintDifficulty}, and you have ${remainingGuesses} remaining guesses.`;
+    if (!Number.isFinite(difficulty) || !Number.isFinite(guesses)) {
+        document.getElementById('hint').textContent = hintText;
+        return;
+    }
+
+    addHintToHistory(hintText, difficulty);
+    quizState.liveHintDifficulty = difficulty;
+    quizState.liveRemainingGuesses = guesses;
+    quizState.viewedHintDifficulty = difficulty;
+
+    renderHintReviewControls();
+    renderHintFromState();
+}
+
+function resetHintReviewState() {
+    quizState.hintHistory = {};
+    quizState.unlockedHintDifficulties = [];
+    quizState.liveHintDifficulty = null;
+    quizState.liveRemainingGuesses = null;
+    quizState.viewedHintDifficulty = null;
+
+    const hintReviewSection = document.getElementById('hintReviewSection');
+    const hintHistoryButtons = document.getElementById('hintHistoryButtons');
+    if (hintReviewSection) {
+        hintReviewSection.classList.add('hidden');
+    }
+    if (hintHistoryButtons) {
+        hintHistoryButtons.innerHTML = '';
+    }
+}
+
+function addHintToHistory(hintText, hintDifficulty) {
+    if (!Number.isFinite(hintDifficulty) || hintDifficulty < 1) {
+        return;
+    }
+    if (typeof hintText !== 'string') {
+        return;
+    }
+    if (!(hintDifficulty in quizState.hintHistory)) {
+        quizState.unlockedHintDifficulties.push(hintDifficulty);
+        quizState.unlockedHintDifficulties.sort((a, b) => b - a);
+    }
+    quizState.hintHistory[hintDifficulty] = hintText;
+}
+
+function selectHintForReview(hintDifficulty) {
+    if (!(hintDifficulty in quizState.hintHistory)) {
+        return;
+    }
+    quizState.viewedHintDifficulty = hintDifficulty;
+    renderHintReviewControls();
+    renderHintFromState();
+}
+
+function renderHintReviewControls() {
+    const hintReviewSection = document.getElementById('hintReviewSection');
+    const hintHistoryButtons = document.getElementById('hintHistoryButtons');
+    if (!hintReviewSection || !hintHistoryButtons) {
+        return;
+    }
+
+    hintHistoryButtons.innerHTML = '';
+
+    if (quizState.unlockedHintDifficulties.length <= 1) {
+        hintReviewSection.classList.add('hidden');
+        return;
+    }
+
+    hintReviewSection.classList.remove('hidden');
+    quizState.unlockedHintDifficulties.forEach(difficulty => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'hint-history-btn';
+        if (difficulty === quizState.viewedHintDifficulty) {
+            button.classList.add('active');
+        }
+
+        let label = `Hint ${difficulty}`;
+        if (difficulty === quizState.liveHintDifficulty) {
+            label += ' (current)';
+        }
+        button.textContent = label;
+        button.addEventListener('click', () => selectHintForReview(difficulty));
+        hintHistoryButtons.appendChild(button);
+    });
+}
+
+function renderHintFromState() {
+    const viewedDifficulty = quizState.viewedHintDifficulty;
+    const liveDifficulty = quizState.liveHintDifficulty;
+    const remainingGuesses = quizState.liveRemainingGuesses;
+    const viewedHintText = quizState.hintHistory[viewedDifficulty] || '';
+
+    document.getElementById('hint').textContent = viewedHintText;
+
+    if (!Number.isFinite(liveDifficulty) || !Number.isFinite(remainingGuesses)) {
+        document.getElementById('hintProgress').textContent = '';
+        document.getElementById('hintPoints').textContent = '';
+        return;
+    }
+
+    const potentialPoints = liveDifficulty * remainingGuesses;
+    if (viewedDifficulty === liveDifficulty) {
+        document.getElementById('hintProgress').textContent = `Hint difficulty is ${liveDifficulty}, and you have ${remainingGuesses} remaining guesses.`;
+    } else {
+        document.getElementById('hintProgress').textContent = `Reviewing hint difficulty ${viewedDifficulty}. Current scoring hint is difficulty ${liveDifficulty}, and you have ${remainingGuesses} remaining guesses.`;
+    }
     document.getElementById('hintPoints').textContent = `If you guess correctly, you will get ${potentialPoints} points.`;
 }
 

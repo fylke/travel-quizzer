@@ -107,6 +107,111 @@ function closeRulesModal() {
     }
 }
 
+// ==================== Hint Complaint Modal ====================
+
+let _hintComplaintTrigger = null;
+const _HINT_COMPLAINT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function openHintComplaintModal() {
+    const quizId = quizState.currentQuizId;
+    const hintDifficulty = quizState.viewedHintDifficulty || quizState.liveHintDifficulty;
+
+    if (!Number.isFinite(quizId) || !Number.isFinite(hintDifficulty)) {
+        showNotification('No active hint is available to report.', 'info');
+        return;
+    }
+
+    _hintComplaintTrigger = document.activeElement;
+
+    const modal = document.getElementById('hintComplaintModal');
+    const quizIdEl = document.getElementById('hintComplaintQuizId');
+    const hintLevelEl = document.getElementById('hintComplaintHintLevel');
+    const emailEl = document.getElementById('hintComplaintEmail');
+    const messageEl = document.getElementById('hintComplaintMessage');
+    const errorEl = document.getElementById('hintComplaintError');
+
+    quizIdEl.textContent = String(quizId);
+    hintLevelEl.textContent = String(hintDifficulty);
+    emailEl.value = (quizState.user && quizState.user.email) ? quizState.user.email : '';
+    messageEl.value = '';
+    errorEl.textContent = '';
+    modal.dataset.quizId = String(quizId);
+    modal.dataset.hintDifficulty = String(hintDifficulty);
+    modal.style.display = 'flex';
+
+    emailEl.focus();
+}
+
+function closeHintComplaintModal() {
+    const modal = document.getElementById('hintComplaintModal');
+    modal.style.display = 'none';
+
+    if (_hintComplaintTrigger) {
+        _hintComplaintTrigger.focus();
+        _hintComplaintTrigger = null;
+    }
+}
+
+async function handleHintComplaintSubmit() {
+    const modal = document.getElementById('hintComplaintModal');
+    const errorEl = document.getElementById('hintComplaintError');
+    const emailEl = document.getElementById('hintComplaintEmail');
+    const messageEl = document.getElementById('hintComplaintMessage');
+    const sendBtn = document.getElementById('hintComplaintSendBtn');
+    const quizId = Number(modal.dataset.quizId);
+    const hintDifficulty = Number(modal.dataset.hintDifficulty);
+    const complainerEmail = emailEl.value.trim().toLowerCase();
+    const message = messageEl.value.trim();
+
+    errorEl.textContent = '';
+
+    if (!complainerEmail) {
+        errorEl.textContent = 'Please provide your email so admins can respond.';
+        emailEl.focus();
+        return;
+    }
+
+    if (!_HINT_COMPLAINT_EMAIL_RE.test(complainerEmail)) {
+        errorEl.textContent = 'Please enter a valid email address.';
+        emailEl.focus();
+        return;
+    }
+
+    if (!message) {
+        errorEl.textContent = 'Please describe what is wrong with the hint.';
+        messageEl.focus();
+        return;
+    }
+
+    sendBtn.disabled = true;
+    try {
+        const response = await fetch(`${API_BASE}/api/hint-complaint`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                quizId,
+                hintDifficulty,
+                complainerEmail,
+                message
+            })
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+            errorEl.textContent = result.error || 'Failed to send complaint.';
+            return;
+        }
+
+        closeHintComplaintModal();
+        showNotification('Hint complaint sent to admins.', 'info');
+    } catch (error) {
+        console.error('Hint complaint error:', error);
+        errorEl.textContent = 'Failed to send complaint.';
+    } finally {
+        sendBtn.disabled = false;
+    }
+}
+
 // ==================== Forgot Password Modal ====================
 
 const _FORGOT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -215,6 +320,10 @@ setupFocusTrap('rulesModal', closeRulesModal, null);
 // Forgot password modal: explicit element IDs
 setupFocusTrap('forgotPasswordModal', closeForgotPasswordModal, [
     'resetEmail', 'forgotPasswordSubmitBtn', 'forgotPasswordCancelBtn'
+]);
+
+setupFocusTrap('hintComplaintModal', closeHintComplaintModal, [
+    'hintComplaintEmail', 'hintComplaintMessage', 'hintComplaintSendBtn', 'hintComplaintCancelBtn'
 ]);
 
 // Wire up the rules modal close button

@@ -133,7 +133,15 @@
                 <div class="hint-meta">
                     <span id="hintProgress"></span>
                     <span id="hintPoints"></span>
-                    </div>
+                </div>
+
+                <div class="hint-review hidden" id="hintReviewSection" aria-live="polite">
+                    <span class="hint-review-label">Review unlocked hints:</span>
+                    <div id="hintHistoryButtons" class="hint-history-buttons"></div>
+                </div>
+                <p class="hint-complaint-link-wrap">
+                    <a href="#" id="hintComplaintLink" onclick="openHintComplaintModal(); return false;">Complain about this hint</a>
+                </p>
 
                 <div class="answer-section">
                     <input 
@@ -273,6 +281,27 @@
             <div id="rulesModalContent" class="rules-modal-content"></div>
             <div class="modal-buttons">
                 <button id="rulesModalCloseBtn" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hint Complaint Modal -->
+    <div id="hintComplaintModal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="hintComplaintModalHeading">
+        <div class="modal-card">
+            <h2 id="hintComplaintModalHeading">Hint complaint</h2>
+            <p class="hint-complaint-context">Quiz ID: <strong id="hintComplaintQuizId"></strong> | Hint level: <strong id="hintComplaintHintLevel"></strong></p>
+            <div class="modal-form-group">
+                <label for="hintComplaintEmail">Your email</label>
+                <input type="email" id="hintComplaintEmail" maxlength="128" placeholder="name@example.com">
+            </div>
+            <div class="modal-form-group">
+                <label for="hintComplaintMessage">What is wrong with this hint?</label>
+                <textarea id="hintComplaintMessage" maxlength="2000" rows="5" placeholder="Describe the issue clearly."></textarea>
+                <span class="inline-error" id="hintComplaintError" role="alert"></span>
+            </div>
+            <div class="modal-buttons">
+                <button onclick="handleHintComplaintSubmit()" class="btn btn-primary" id="hintComplaintSendBtn">Send</button>
+                <button onclick="closeHintComplaintModal()" class="btn btn-secondary" id="hintComplaintCancelBtn">Cancel</button>
             </div>
         </div>
     </div>

@@ -18,9 +18,8 @@ class EmailServiceError(Exception):
         self.reason = reason
 
 
-def send_password_reset_email(to_address: str, reset_url: str) -> None:
-    """Send a password reset email. Raises EmailServiceError on failure."""
-
+def _load_smtp_config() -> tuple[str, int, str, str, str, bool]:
+    """Return validated SMTP config or raise EmailServiceError."""
     # --- Read and validate SMTP configuration at call time ---
     smtp_host = os.environ.get("SMTP_HOST", "")
     smtp_port_raw = os.environ.get("SMTP_PORT", "")
@@ -50,23 +49,25 @@ def send_password_reset_email(to_address: str, reset_url: str) -> None:
             f"SMTP_PORT must be between 1 and 65535, got: {smtp_port}"
         )
 
-    # --- Build the email message ---
-    subject = "Travel Quizzer \u2014 Password Reset Request"
-    body = (
-        f"You requested a password reset for your Travel Quizzer account.\n\n"
-        f"Click the link below to set a new password:\n\n"
-        f"{reset_url}\n\n"
-        f"This link expires in 15 minutes.\n\n"
-        f"If you did not request a password reset, you can safely ignore this email."
-    )
+    use_tls = use_tls_raw.strip().lower() == "true"
+    return smtp_host, smtp_port, smtp_username, smtp_password, from_address, use_tls
+
+
+def _send_email(to_address: str, subject: str, body: str) -> None:
+    """Send one plain-text email using configured SMTP settings."""
+    (
+        smtp_host,
+        smtp_port,
+        smtp_username,
+        smtp_password,
+        from_address,
+        use_tls,
+    ) = _load_smtp_config()
 
     message = MIMEText(body, "plain")
     message["Subject"] = subject
     message["From"] = from_address
     message["To"] = to_address
-
-    # --- Connect and send ---
-    use_tls = use_tls_raw.strip().lower() == "true"
 
     try:
         if use_tls:
@@ -79,3 +80,48 @@ def send_password_reset_email(to_address: str, reset_url: str) -> None:
             smtp.sendmail(from_address, to_address, message.as_string())
     except smtplib.SMTPException as exc:
         raise EmailServiceError(f"SMTP error while sending email: {exc}") from exc
+
+
+def send_password_reset_email(to_address: str, reset_url: str) -> None:
+    """Send a password reset email. Raises EmailServiceError on failure."""
+
+    # --- Build the email message ---
+    subject = "Travel Quizzer \u2014 Password Reset Request"
+    body = (
+        f"You requested a password reset for your Travel Quizzer account.\n\n"
+        f"Click the link below to set a new password:\n\n"
+        f"{reset_url}\n\n"
+        f"This link expires in 15 minutes.\n\n"
+        f"If you did not request a password reset, you can safely ignore this email."
+    )
+
+    _send_email(to_address, subject, body)
+
+
+def send_hint_complaint_email(
+    admin_address: str,
+    reporter_email: str,
+    reporter_name: str,
+    quiz_id: int,
+    hint_difficulty: int,
+    hint_text: str,
+    message: str,
+) -> None:
+    """Send a hint complaint email to the admin mailbox."""
+
+    if not admin_address:
+        raise EmailServiceError("ADMIN_EMAIL is missing or empty")
+
+    subject = f"Travel Quizzer - Hint complaint for quiz {quiz_id}"
+    body = (
+        "A user submitted a hint complaint.\n\n"
+        f"Reporter name: {reporter_name}\n"
+        f"Reporter email (for follow-up): {reporter_email}\n"
+        f"Quiz ID: {quiz_id}\n"
+        f"Hint level: {hint_difficulty}\n"
+        f"Hint text: {hint_text}\n\n"
+        "Complaint message:\n"
+        f"{message}\n"
+    )
+
+    _send_email(admin_address, subject, body)
