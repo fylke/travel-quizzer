@@ -78,19 +78,19 @@ jobs:
 
               if command -v python3 >/dev/null 2>&1; then
                 python3 - "$db_path" <<'PY'
-import sqlite3
-import sys
+                  import sqlite3
+                  import sys
 
-db_path = sys.argv[1]
-conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-try:
-    result = conn.execute("PRAGMA quick_check;").fetchone()
-finally:
-    conn.close()
+                  db_path = sys.argv[1]
+                  conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+                  try:
+                    result = conn.execute("PRAGMA quick_check;").fetchone()
+                  finally:
+                    conn.close()
 
-if not result or result[0] != "ok":
-    raise SystemExit(f"SQLite quick_check failed: {result}")
-PY
+                  if not result or result[0] != "ok":
+                    raise SystemExit(f"SQLite quick_check failed: {result}")
+                PY
                 return
               fi
 
@@ -130,14 +130,14 @@ PY
                 echo "No database or media changes detected since last backup. Skipping archive creation."
 
                 cat > "$REPORT_FILE" <<EOF
-{
-  "action": "backup",
-  "status": "skipped",
-  "reason": "no_changes",
-  "retention_count": $RETAIN_COUNT,
-  "created_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-}
-EOF
+                {
+                  "action": "backup",
+                  "status": "skipped",
+                  "reason": "no_changes",
+                  "retention_count": $RETAIN_COUNT,
+                  "created_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                }
+                EOF
                 exit 0
               fi
             fi
@@ -172,16 +172,16 @@ EOF
             MEDIA_ARCHIVE_HASH=$(sha256sum "$BACKUP_MEDIA_ARCHIVE" | awk '{print $1}')
 
             cat > "$BACKUP_MANIFEST" <<EOF
-BACKUP_ID=$TIMESTAMP
-CREATED_AT_UTC=$TIMESTAMP
-DB_ARCHIVE=$(basename "$BACKUP_DB_ARCHIVE")
-MEDIA_ARCHIVE=$(basename "$BACKUP_MEDIA_ARCHIVE")
-DB_SHA256=$DB_HASH
-MEDIA_SHA256=$MEDIA_HASH
-DB_ARCHIVE_SHA256=$DB_ARCHIVE_HASH
-MEDIA_ARCHIVE_SHA256=$MEDIA_ARCHIVE_HASH
-MEDIA_FILE_COUNT=$MEDIA_FILE_COUNT
-EOF
+            BACKUP_ID=$TIMESTAMP
+            CREATED_AT_UTC=$TIMESTAMP
+            DB_ARCHIVE=$(basename "$BACKUP_DB_ARCHIVE")
+            MEDIA_ARCHIVE=$(basename "$BACKUP_MEDIA_ARCHIVE")
+            DB_SHA256=$DB_HASH
+            MEDIA_SHA256=$MEDIA_HASH
+            DB_ARCHIVE_SHA256=$DB_ARCHIVE_HASH
+            MEDIA_ARCHIVE_SHA256=$MEDIA_ARCHIVE_HASH
+            MEDIA_FILE_COUNT=$MEDIA_FILE_COUNT
+            EOF
 
             tar -tzf "$BACKUP_DB_ARCHIVE" >/dev/null
             tar -tzf "$BACKUP_MEDIA_ARCHIVE" >/dev/null
@@ -228,23 +228,23 @@ EOF
             fi
 
             cat > "$REPORT_FILE" <<EOF
-{
-  "action": "backup",
-  "status": "success",
-  "backup_id": "$TIMESTAMP",
-  "retention_count": $RETAIN_COUNT,
-  "deleted_old_sets": $DELETED_COUNT,
-  "db_archive": "$(basename "$BACKUP_DB_ARCHIVE")",
-  "media_archive": "$(basename "$BACKUP_MEDIA_ARCHIVE")",
-  "manifest": "$(basename "$BACKUP_MANIFEST")",
-  "db_sha256": "$DB_HASH",
-  "media_sha256": "$MEDIA_HASH",
-  "db_archive_sha256": "$DB_ARCHIVE_HASH",
-  "media_archive_sha256": "$MEDIA_ARCHIVE_HASH",
-  "media_file_count": $MEDIA_FILE_COUNT,
-  "created_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-}
-EOF
+            {
+              "action": "backup",
+              "status": "success",
+              "backup_id": "$TIMESTAMP",
+              "retention_count": $RETAIN_COUNT,
+              "deleted_old_sets": $DELETED_COUNT,
+              "db_archive": "$(basename "$BACKUP_DB_ARCHIVE")",
+              "media_archive": "$(basename "$BACKUP_MEDIA_ARCHIVE")",
+              "manifest": "$(basename "$BACKUP_MANIFEST")",
+              "db_sha256": "$DB_HASH",
+              "media_sha256": "$MEDIA_HASH",
+              "db_archive_sha256": "$DB_ARCHIVE_HASH",
+              "media_archive_sha256": "$MEDIA_ARCHIVE_HASH",
+              "media_file_count": $MEDIA_FILE_COUNT,
+              "created_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            }
+            EOF
 
             echo "Backup created and verified successfully"
             echo "  Database archive: $BACKUP_DB_ARCHIVE"
@@ -398,19 +398,19 @@ EOF
               fi
             elif command -v python3 >/dev/null 2>&1; then
               python3 - "$TMP_DIR/quiz_data.db" <<'PY'
-import sqlite3
-import sys
+              import sqlite3
+              import sys
 
-db_path = sys.argv[1]
-conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-try:
-    result = conn.execute("PRAGMA quick_check;").fetchone()
-finally:
-    conn.close()
+              db_path = sys.argv[1]
+              conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+              try:
+                result = conn.execute("PRAGMA quick_check;").fetchone()
+              finally:
+                conn.close()
 
-if not result or result[0] != "ok":
-    raise SystemExit(f"SQLite quick_check failed: {result}")
-PY
+              if not result or result[0] != "ok":
+                raise SystemExit(f"SQLite quick_check failed: {result}")
+              PY
             fi
 
             DOCKER_BIN=""
@@ -453,19 +453,19 @@ PY
             fi
 
             cat > "$REPORT_FILE" <<EOF
-{
-  "action": "restore",
-  "status": "success",
-  "backup_id": "$RESTORED_BACKUP_ID",
-  "db_archive": "$(basename "$DB_ARCHIVE")",
-  "media_archive": "$(basename "$MEDIA_ARCHIVE")",
-  "db_archive_sha256": "$DB_ARCHIVE_HASH",
-  "media_archive_sha256": "$MEDIA_ARCHIVE_HASH",
-  "container_was_running": $RUNNING_BEFORE,
-  "health_check": "$HEALTH_STATUS",
-  "created_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-}
-EOF
+            {
+              "action": "restore",
+              "status": "success",
+              "backup_id": "$RESTORED_BACKUP_ID",
+              "db_archive": "$(basename "$DB_ARCHIVE")",
+              "media_archive": "$(basename "$MEDIA_ARCHIVE")",
+              "db_archive_sha256": "$DB_ARCHIVE_HASH",
+              "media_archive_sha256": "$MEDIA_ARCHIVE_HASH",
+              "container_was_running": $RUNNING_BEFORE,
+              "health_check": "$HEALTH_STATUS",
+              "created_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            }
+            EOF
 
             echo "Restore complete"
             echo "  Database archive: $DB_ARCHIVE"
