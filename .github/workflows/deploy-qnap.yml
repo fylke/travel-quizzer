@@ -260,7 +260,11 @@ jobs:
             }
 
             DOCKER_BIN=$(resolve_docker)
-            "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} /app/.venv/bin/python -m scripts.seed_db
+            "$DOCKER_BIN" exec \
+              -e ADMIN_BOOTSTRAP_EMAIL="${{ secrets.ADMIN_BOOTSTRAP_EMAIL }}" \
+              -e ADMIN_BOOTSTRAP_PASSWORD="${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}" \
+              -e REQUIRE_CUSTOM_ADMIN_BOOTSTRAP=true \
+              ${{ env.CONTAINER_NAME }} /app/.venv/bin/python -m scripts.seed_db
 
       - name: Verify deployment
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
