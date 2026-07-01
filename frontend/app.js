@@ -260,8 +260,8 @@ function displayQuiz(data) {
     resetHintReviewState();
     quizState.currentQuizId = Number(data.id) || null;
     updateHintDisplay(data.hint, data.hintDifficulty, data.remainingGuesses);
-    document.getElementById('image1').src = data.images[0];
-    document.getElementById('image2').src = data.images[1];
+    wireZoomableImage(document.getElementById('image1'), data.images[0], 'Destination image 1');
+    wireZoomableImage(document.getElementById('image2'), data.images[1], 'Destination image 2');
     document.getElementById('answerInput').value = '';
     document.getElementById('answerInput').focus();
 }
@@ -416,9 +416,8 @@ function renderResultImages(imageUrls) {
 
         const image = document.createElement('img');
         image.className = 'result-image';
-        image.src = url;
-        image.alt = `Additional destination image ${index + 1}`;
         image.loading = 'lazy';
+        wireZoomableImage(image, url, `Additional destination image ${index + 1}`);
 
         imageContainer.appendChild(image);
         container.appendChild(imageContainer);

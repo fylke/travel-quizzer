@@ -52,6 +52,30 @@ function setupFocusTrap(modalId, closeCallback, focusableIds) {
     });
 }
 
+function wireZoomableImage(imageEl, imageUrl, altText) {
+    if (!imageEl) {
+        return;
+    }
+
+    imageEl.src = imageUrl;
+    imageEl.alt = altText;
+    imageEl.tabIndex = 0;
+    imageEl.setAttribute('role', 'button');
+    imageEl.setAttribute('aria-label', `${altText}. Click to enlarge.`);
+    imageEl.title = 'Click to enlarge';
+
+    imageEl.onclick = function () {
+        openImageModal(imageUrl, altText);
+    };
+
+    imageEl.onkeydown = function (event) {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openImageModal(imageUrl, altText);
+        }
+    };
+}
+
 // ==================== Rules Modal ====================
 
 let _rulesModalTrigger = null;
@@ -326,10 +350,72 @@ setupFocusTrap('hintComplaintModal', closeHintComplaintModal, [
     'hintComplaintEmail', 'hintComplaintMessage', 'hintComplaintSendBtn', 'hintComplaintCancelBtn'
 ]);
 
+setupFocusTrap('imageModal', closeImageModal, [
+    'imageModalCloseBtn'
+]);
+
 // Wire up the rules modal close button
 document.addEventListener('DOMContentLoaded', function () {
     const closeBtn = document.getElementById('rulesModalCloseBtn');
     if (closeBtn) {
         closeBtn.addEventListener('click', closeRulesModal);
     }
+
+    const imageModal = document.getElementById('imageModal');
+    if (imageModal) {
+        imageModal.addEventListener('click', function (event) {
+            if (event.target === imageModal) {
+                closeImageModal();
+            }
+        });
+    }
+
+    const imageModalCloseBtn = document.getElementById('imageModalCloseBtn');
+    if (imageModalCloseBtn) {
+        imageModalCloseBtn.addEventListener('click', closeImageModal);
+    }
 });
+
+// ==================== Image Modal ====================
+
+let _imageModalTrigger = null;
+
+function openImageModal(imageUrl, altText) {
+    const modal = document.getElementById('imageModal');
+    const imageEl = document.getElementById('imageModalImage');
+    const captionEl = document.getElementById('imageModalCaption');
+    const closeBtn = document.getElementById('imageModalCloseBtn');
+
+    if (!modal || !imageEl) {
+        return;
+    }
+
+    _imageModalTrigger = document.activeElement;
+    imageEl.src = imageUrl;
+    imageEl.alt = altText;
+    if (captionEl) {
+        captionEl.textContent = altText;
+    }
+
+    modal.style.display = 'flex';
+    if (closeBtn) {
+        closeBtn.focus();
+    }
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('imageModal');
+    const imageEl = document.getElementById('imageModalImage');
+
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    if (imageEl) {
+        imageEl.src = '';
+    }
+
+    if (_imageModalTrigger && typeof _imageModalTrigger.focus === 'function') {
+        _imageModalTrigger.focus();
+    }
+    _imageModalTrigger = null;
+}

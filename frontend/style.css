@@ -300,6 +300,13 @@ body {
     height: 250px;
     object-fit: cover;
     display: block;
+    cursor: zoom-in;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.quiz-image:hover {
+    transform: scale(1.01);
+    filter: brightness(1.02);
 
 .hint-review {
     margin-bottom: 16px;
@@ -591,6 +598,13 @@ body {
     width: 100%;
     height: 140px;
     object-fit: cover;
+    cursor: zoom-in;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.result-image:hover {
+    transform: scale(1.02);
+    filter: brightness(1.02);
 }
 
 .button-group {
@@ -1043,6 +1057,58 @@ body {
     display: flex;
     gap: 12px;
     justify-content: center;
+}
+
+/* ==================== Image Modal ==================== */
+
+.image-modal-overlay {
+    padding: 20px;
+}
+
+.image-modal-card {
+    position: relative;
+    max-width: min(92vw, 1100px);
+    width: 100%;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #0f172a;
+    color: #fff;
+}
+
+.image-modal-image {
+    width: 100%;
+    max-height: calc(92vh - 88px);
+    object-fit: contain;
+    border-radius: 10px;
+    background: #111827;
+}
+
+.image-modal-caption {
+    margin: 0;
+    text-align: center;
+    font-size: 0.95em;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.image-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    font-size: 1.5em;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.image-modal-close:hover {
+    background: rgba(255, 255, 255, 0.22);
 }
 
 /* ==================== Rules Modal ==================== */
