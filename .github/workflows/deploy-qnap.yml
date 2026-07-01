@@ -289,6 +289,15 @@ jobs:
 
             DOCKER_BIN=$(resolve_docker)
 
+            # Surface recent runtime logs and fail fast on obvious startup errors.
+            LOG_TAIL=$("$DOCKER_BIN" logs --tail 120 ${{ env.CONTAINER_NAME }} 2>&1 || true)
+            echo "Recent container logs (tail 120):"
+            echo "$LOG_TAIL"
+            if printf '%s\n' "$LOG_TAIL" | grep -Eiq 'Traceback \(most recent call last\)|Exception:'; then
+              echo "Detected exception traceback patterns in container logs after deploy."
+              exit 1
+            fi
+
             # Confirm the app responds on a public endpoint
             RESPONSE=$("$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health', timeout=5).read().decode('utf-8'))")
             if [ -z "$RESPONSE" ]; then

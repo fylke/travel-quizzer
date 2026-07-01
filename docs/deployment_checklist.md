@@ -91,11 +91,11 @@ Levels run 1 (easiest) through 5 (hardest). Current country IDs:
 
 ## Post-Deploy Verification
 
-- [ ] Check container logs:
+- [x] Check container logs (automated in deploy workflow "Verify deployment"):
   ```bash
   docker logs travel-quizzer
   ```
-- [ ] Confirm the app responds at `http://<qnap-ip>:9696`.
+- [x] Confirm the app responds at `http://<qnap-ip>:9696` (automated health probe in deploy workflow).
 - [ ] Log in with the seeded admin account (`admin@example.com` / `adminpass123`).
 - [ ] **Change the default admin password immediately** via the admin panel or by re-seeding.
 
