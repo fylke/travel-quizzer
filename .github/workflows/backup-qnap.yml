@@ -1,0 +1,503 @@
+name: QNAP Backup and Restore
+
+on:
+  schedule:
+    - cron: '15 2 * * 0' # Weekly on Sunday at 02:15 UTC
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Operation to run
+        required: true
+        default: backup
+        type: choice
+        options:
+          - backup
+          - restore
+      backup_id:
+        description: Backup timestamp to restore, for example 20260701T021500Z. Leave empty for latest.
+        required: false
+        default: ''
+      retention_count:
+        description: Number of backup sets to keep for backup action.
+        required: false
+        default: '12'
+
+concurrency:
+  group: qnap-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.action == 'backup')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run weekly backup on QNAP
+        id: qnap_backup
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.QNAP_HOST }}
+          port: ${{ secrets.QNAP_SSH_PORT }}
+          username: ${{ secrets.QNAP_USER }}
+          key: ${{ secrets.QNAP_SSH_KEY }}
+          script: |
+            set -euo pipefail
+
+            BASE_DIR="/share/Container/travel-quizzer"
+            DB_FILE="$BASE_DIR/database/quiz_data.db"
+            MEDIA_DIR="$BASE_DIR/media"
+            BACKUP_DIR="$BASE_DIR/backups"
+            STATE_FILE="$BACKUP_DIR/.last_backup_state"
+            REPORT_FILE="$BACKUP_DIR/last_backup_report.json"
+
+            RETAIN_COUNT=12
+            REQUESTED_RETAIN_COUNT="${{ inputs.retention_count }}"
+            if [[ "$REQUESTED_RETAIN_COUNT" =~ ^[0-9]+$ ]] && [ "$REQUESTED_RETAIN_COUNT" -gt 0 ]; then
+              RETAIN_COUNT="$REQUESTED_RETAIN_COUNT"
+            fi
+
+            mkdir -p "$BACKUP_DIR"
+
+            if [ ! -f "$DB_FILE" ]; then
+              echo "Database file not found: $DB_FILE"
+              exit 1
+            fi
+
+            validate_db() {
+              local db_path="$1"
+
+              if command -v sqlite3 >/dev/null 2>&1; then
+                local quick_check
+                quick_check=$(sqlite3 "$db_path" "PRAGMA quick_check;" | head -n 1)
+                if [ "$quick_check" != "ok" ]; then
+                  echo "SQLite quick_check failed: $quick_check"
+                  exit 1
+                fi
+                return
+              fi
+
+              if command -v python3 >/dev/null 2>&1; then
+                python3 - "$db_path" <<'PY'
+import sqlite3
+import sys
+
+db_path = sys.argv[1]
+conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+try:
+    result = conn.execute("PRAGMA quick_check;").fetchone()
+finally:
+    conn.close()
+
+if not result or result[0] != "ok":
+    raise SystemExit(f"SQLite quick_check failed: {result}")
+PY
+                return
+              fi
+
+              if ! head -c 16 "$db_path" | grep -q "SQLite format 3"; then
+                echo "Unable to validate SQLite integrity and header check failed"
+                exit 1
+              fi
+            }
+
+            compute_media_hash() {
+              local dir="$1"
+              local empty_hash="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              if [ ! -d "$dir" ]; then
+                echo "$empty_hash"
+                return
+              fi
+
+              (
+                cd "$dir"
+                find . -type f -print0 \
+                  | LC_ALL=C sort -z \
+                  | while IFS= read -r -d '' file; do
+                      sha256sum "$file"
+                    done \
+                  | sha256sum \
+                  | awk '{print $1}'
+              )
+            }
+
+            DB_HASH=$(sha256sum "$DB_FILE" | awk '{print $1}')
+            MEDIA_HASH=$(compute_media_hash "$MEDIA_DIR")
+            CURRENT_STATE="$DB_HASH:$MEDIA_HASH"
+
+            if [ -f "$STATE_FILE" ]; then
+              PREVIOUS_STATE=$(cat "$STATE_FILE")
+              if [ "$PREVIOUS_STATE" = "$CURRENT_STATE" ]; then
+                echo "No database or media changes detected since last backup. Skipping archive creation."
+
+                cat > "$REPORT_FILE" <<EOF
+{
+  "action": "backup",
+  "status": "skipped",
+  "reason": "no_changes",
+  "retention_count": $RETAIN_COUNT,
+  "created_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+                exit 0
+              fi
+            fi
+
+            TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+            BACKUP_DB_ARCHIVE="$BACKUP_DIR/db_${TIMESTAMP}.tar.gz"
+            BACKUP_MEDIA_ARCHIVE="$BACKUP_DIR/media_${TIMESTAMP}.tar.gz"
+            BACKUP_MANIFEST="$BACKUP_DIR/manifest_${TIMESTAMP}.txt"
+
+            TMP_DIR=$(mktemp -d)
+            trap 'rm -rf "$TMP_DIR"' EXIT
+
+            cp "$DB_FILE" "$TMP_DIR/quiz_data.db"
+            validate_db "$TMP_DIR/quiz_data.db"
+
+            if [ -d "$MEDIA_DIR" ]; then
+              MEDIA_FILE_COUNT=$(find "$MEDIA_DIR" -type f | wc -l | awk '{print $1}')
+            else
+              MEDIA_FILE_COUNT=0
+            fi
+
+            echo "Creating backup archives"
+            tar -C "$TMP_DIR" -czf "$BACKUP_DB_ARCHIVE" quiz_data.db
+            if [ -d "$MEDIA_DIR" ]; then
+              tar -C "$BASE_DIR" -czf "$BACKUP_MEDIA_ARCHIVE" media
+            else
+              mkdir -p "$TMP_DIR/media"
+              tar -C "$TMP_DIR" -czf "$BACKUP_MEDIA_ARCHIVE" media
+            fi
+
+            DB_ARCHIVE_HASH=$(sha256sum "$BACKUP_DB_ARCHIVE" | awk '{print $1}')
+            MEDIA_ARCHIVE_HASH=$(sha256sum "$BACKUP_MEDIA_ARCHIVE" | awk '{print $1}')
+
+            cat > "$BACKUP_MANIFEST" <<EOF
+BACKUP_ID=$TIMESTAMP
+CREATED_AT_UTC=$TIMESTAMP
+DB_ARCHIVE=$(basename "$BACKUP_DB_ARCHIVE")
+MEDIA_ARCHIVE=$(basename "$BACKUP_MEDIA_ARCHIVE")
+DB_SHA256=$DB_HASH
+MEDIA_SHA256=$MEDIA_HASH
+DB_ARCHIVE_SHA256=$DB_ARCHIVE_HASH
+MEDIA_ARCHIVE_SHA256=$MEDIA_ARCHIVE_HASH
+MEDIA_FILE_COUNT=$MEDIA_FILE_COUNT
+EOF
+
+            tar -tzf "$BACKUP_DB_ARCHIVE" >/dev/null
+            tar -tzf "$BACKUP_MEDIA_ARCHIVE" >/dev/null
+
+            mkdir -p "$TMP_DIR/verify-db" "$TMP_DIR/verify-media"
+            tar -xzf "$BACKUP_DB_ARCHIVE" -C "$TMP_DIR/verify-db"
+            tar -xzf "$BACKUP_MEDIA_ARCHIVE" -C "$TMP_DIR/verify-media"
+
+            RESTORED_DB_HASH=$(sha256sum "$TMP_DIR/verify-db/quiz_data.db" | awk '{print $1}')
+            if [ "$RESTORED_DB_HASH" != "$DB_HASH" ]; then
+              echo "Database checksum mismatch after archive verification"
+              exit 1
+            fi
+
+            RESTORED_MEDIA_HASH=$(compute_media_hash "$TMP_DIR/verify-media/media")
+            if [ "$RESTORED_MEDIA_HASH" != "$MEDIA_HASH" ]; then
+              echo "Media checksum mismatch after archive verification"
+              exit 1
+            fi
+
+            echo "$CURRENT_STATE" > "$STATE_FILE"
+            echo "$TIMESTAMP" > "$BACKUP_DIR/.latest_backup_id"
+
+            DELETED_COUNT=0
+            DB_BACKUP_COUNT=$(ls -1 "$BACKUP_DIR"/db_*.tar.gz 2>/dev/null | wc -l | awk '{print $1}')
+            if [ "$DB_BACKUP_COUNT" -gt "$RETAIN_COUNT" ]; then
+              DELETE_COUNT=$((DB_BACKUP_COUNT - RETAIN_COUNT))
+              DELETED_COUNT="$DELETE_COUNT"
+              echo "Pruning $DELETE_COUNT old backup set(s), keeping latest $RETAIN_COUNT"
+
+              ls -1 "$BACKUP_DIR"/db_*.tar.gz 2>/dev/null \
+                | LC_ALL=C sort \
+                | head -n "$DELETE_COUNT" \
+                | while IFS= read -r old_db_archive; do
+                    [ -n "$old_db_archive" ] || continue
+                    backup_id=$(basename "$old_db_archive")
+                    backup_id=${backup_id#db_}
+                    backup_id=${backup_id%.tar.gz}
+
+                    rm -f "$old_db_archive"
+                    rm -f "$BACKUP_DIR/media_${backup_id}.tar.gz"
+                    rm -f "$BACKUP_DIR/manifest_${backup_id}.txt"
+                  done
+            fi
+
+            cat > "$REPORT_FILE" <<EOF
+{
+  "action": "backup",
+  "status": "success",
+  "backup_id": "$TIMESTAMP",
+  "retention_count": $RETAIN_COUNT,
+  "deleted_old_sets": $DELETED_COUNT,
+  "db_archive": "$(basename "$BACKUP_DB_ARCHIVE")",
+  "media_archive": "$(basename "$BACKUP_MEDIA_ARCHIVE")",
+  "manifest": "$(basename "$BACKUP_MANIFEST")",
+  "db_sha256": "$DB_HASH",
+  "media_sha256": "$MEDIA_HASH",
+  "db_archive_sha256": "$DB_ARCHIVE_HASH",
+  "media_archive_sha256": "$MEDIA_ARCHIVE_HASH",
+  "media_file_count": $MEDIA_FILE_COUNT,
+  "created_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+
+            echo "Backup created and verified successfully"
+            echo "  Database archive: $BACKUP_DB_ARCHIVE"
+            echo "  Media archive: $BACKUP_MEDIA_ARCHIVE"
+            echo "  Manifest: $BACKUP_MANIFEST"
+
+      - name: Collect backup report
+        shell: bash
+        env:
+          QNAP_HOST: ${{ secrets.QNAP_HOST }}
+          QNAP_PORT: ${{ secrets.QNAP_SSH_PORT }}
+          QNAP_USER: ${{ secrets.QNAP_USER }}
+          QNAP_KEY: ${{ secrets.QNAP_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp-reports
+          KEY_FILE=.tmp-reports/qnap_key
+          printf '%s\n' "$QNAP_KEY" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+
+          ssh -i "$KEY_FILE" -p "$QNAP_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            "$QNAP_USER@$QNAP_HOST" \
+            "cat /share/Container/travel-quizzer/backups/last_backup_report.json" \
+            > .tmp-reports/backup-report.json
+
+      - name: Upload backup report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-report-${{ github.run_id }}
+          path: .tmp-reports/backup-report.json
+          if-no-files-found: error
+
+  restore:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'restore'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Restore backup on QNAP
+        id: qnap_restore
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.QNAP_HOST }}
+          port: ${{ secrets.QNAP_SSH_PORT }}
+          username: ${{ secrets.QNAP_USER }}
+          key: ${{ secrets.QNAP_SSH_KEY }}
+          script: |
+            set -euo pipefail
+
+            BASE_DIR="/share/Container/travel-quizzer"
+            BACKUP_DIR="$BASE_DIR/backups"
+            DB_DIR="$BASE_DIR/database"
+            DB_FILE="$DB_DIR/quiz_data.db"
+            MEDIA_DIR="$BASE_DIR/media"
+            CONTAINER_NAME="travel-quizzer"
+            REPORT_FILE="$BACKUP_DIR/last_restore_report.json"
+
+            REQUESTED_BACKUP="${{ inputs.backup_id }}"
+            if [ -z "$REQUESTED_BACKUP" ]; then
+              REQUESTED_BACKUP="latest"
+            fi
+
+            if [ "$REQUESTED_BACKUP" = "latest" ]; then
+              DB_ARCHIVE=$(ls -1 "$BACKUP_DIR"/db_*.tar.gz 2>/dev/null | LC_ALL=C sort | tail -n 1)
+              MEDIA_ARCHIVE=$(ls -1 "$BACKUP_DIR"/media_*.tar.gz 2>/dev/null | LC_ALL=C sort | tail -n 1)
+            else
+              DB_ARCHIVE="$BACKUP_DIR/db_${REQUESTED_BACKUP}.tar.gz"
+              MEDIA_ARCHIVE="$BACKUP_DIR/media_${REQUESTED_BACKUP}.tar.gz"
+            fi
+
+            MANIFEST_FILE=""
+            if [ "$REQUESTED_BACKUP" = "latest" ]; then
+              MANIFEST_FILE=$(ls -1 "$BACKUP_DIR"/manifest_*.txt 2>/dev/null | LC_ALL=C sort | tail -n 1)
+            else
+              MANIFEST_FILE="$BACKUP_DIR/manifest_${REQUESTED_BACKUP}.txt"
+            fi
+
+            if [ -z "${DB_ARCHIVE:-}" ] || [ ! -f "$DB_ARCHIVE" ]; then
+              echo "Database archive not found for backup_id=$REQUESTED_BACKUP"
+              exit 1
+            fi
+
+            if [ -z "${MEDIA_ARCHIVE:-}" ] || [ ! -f "$MEDIA_ARCHIVE" ]; then
+              echo "Media archive not found for backup_id=$REQUESTED_BACKUP"
+              exit 1
+            fi
+
+            RESTORED_BACKUP_ID=$(basename "$DB_ARCHIVE")
+            RESTORED_BACKUP_ID=${RESTORED_BACKUP_ID#db_}
+            RESTORED_BACKUP_ID=${RESTORED_BACKUP_ID%.tar.gz}
+
+            DB_ARCHIVE_HASH=$(sha256sum "$DB_ARCHIVE" | awk '{print $1}')
+            MEDIA_ARCHIVE_HASH=$(sha256sum "$MEDIA_ARCHIVE" | awk '{print $1}')
+
+            if [ -n "${MANIFEST_FILE:-}" ] && [ -f "$MANIFEST_FILE" ]; then
+              EXPECTED_DB_ARCHIVE_HASH=$(grep '^DB_ARCHIVE_SHA256=' "$MANIFEST_FILE" | cut -d= -f2-)
+              EXPECTED_MEDIA_ARCHIVE_HASH=$(grep '^MEDIA_ARCHIVE_SHA256=' "$MANIFEST_FILE" | cut -d= -f2-)
+
+              ACTUAL_DB_ARCHIVE_HASH=$(sha256sum "$DB_ARCHIVE" | awk '{print $1}')
+              ACTUAL_MEDIA_ARCHIVE_HASH=$(sha256sum "$MEDIA_ARCHIVE" | awk '{print $1}')
+
+              if [ -n "$EXPECTED_DB_ARCHIVE_HASH" ] && [ "$ACTUAL_DB_ARCHIVE_HASH" != "$EXPECTED_DB_ARCHIVE_HASH" ]; then
+                echo "Database archive checksum mismatch against manifest"
+                exit 1
+              fi
+
+              if [ -n "$EXPECTED_MEDIA_ARCHIVE_HASH" ] && [ "$ACTUAL_MEDIA_ARCHIVE_HASH" != "$EXPECTED_MEDIA_ARCHIVE_HASH" ]; then
+                echo "Media archive checksum mismatch against manifest"
+                exit 1
+              fi
+            fi
+
+            resolve_docker() {
+              if command -v docker >/dev/null 2>&1; then
+                command -v docker
+                return 0
+              fi
+              for candidate in \
+                /share/CACHEDEV2_DATA/.qpkg/container-station/bin/docker \
+                /share/CACHEDEV2_DATA/.qpkg/ContainerStation/bin/docker; do
+                if [ -x "$candidate" ]; then
+                  echo "$candidate"
+                  return 0
+                fi
+              done
+              return 1
+            }
+
+            TMP_DIR=$(mktemp -d)
+            trap 'rm -rf "$TMP_DIR"' EXIT
+
+            tar -tzf "$DB_ARCHIVE" >/dev/null
+            tar -tzf "$MEDIA_ARCHIVE" >/dev/null
+            tar -xzf "$DB_ARCHIVE" -C "$TMP_DIR"
+            tar -xzf "$MEDIA_ARCHIVE" -C "$TMP_DIR"
+
+            if [ ! -f "$TMP_DIR/quiz_data.db" ]; then
+              echo "Restored archive is missing quiz_data.db"
+              exit 1
+            fi
+
+            if [ ! -d "$TMP_DIR/media" ]; then
+              echo "Restored archive is missing media directory"
+              exit 1
+            fi
+
+            if command -v sqlite3 >/dev/null 2>&1; then
+              QUICK_CHECK=$(sqlite3 "$TMP_DIR/quiz_data.db" "PRAGMA quick_check;" | head -n 1)
+              if [ "$QUICK_CHECK" != "ok" ]; then
+                echo "Restored database failed quick_check: $QUICK_CHECK"
+                exit 1
+              fi
+            elif command -v python3 >/dev/null 2>&1; then
+              python3 - "$TMP_DIR/quiz_data.db" <<'PY'
+import sqlite3
+import sys
+
+db_path = sys.argv[1]
+conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+try:
+    result = conn.execute("PRAGMA quick_check;").fetchone()
+finally:
+    conn.close()
+
+if not result or result[0] != "ok":
+    raise SystemExit(f"SQLite quick_check failed: {result}")
+PY
+            fi
+
+            DOCKER_BIN=""
+            RUNNING_BEFORE=0
+            HEALTH_STATUS="skipped"
+            if DOCKER_BIN=$(resolve_docker); then
+              if "$DOCKER_BIN" ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+                RUNNING_BEFORE=1
+                "$DOCKER_BIN" stop "$CONTAINER_NAME"
+              fi
+            fi
+
+            mkdir -p "$DB_DIR" "$MEDIA_DIR"
+            cp "$TMP_DIR/quiz_data.db" "$DB_FILE"
+            rm -rf "$MEDIA_DIR"
+            mkdir -p "$MEDIA_DIR"
+            cp -a "$TMP_DIR/media/." "$MEDIA_DIR/"
+
+            if [ "$RUNNING_BEFORE" -eq 1 ]; then
+              "$DOCKER_BIN" start "$CONTAINER_NAME"
+
+              echo "Waiting for restored container health endpoint"
+              READY=0
+              for i in $(seq 1 24); do
+                if "$DOCKER_BIN" exec "$CONTAINER_NAME" python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=5)" >/dev/null 2>&1; then
+                  READY=1
+                  break
+                fi
+                echo "  Attempt $i/24: not ready yet"
+                sleep 5
+              done
+
+              if [ "$READY" -ne 1 ]; then
+                echo "Container health check failed after restore"
+                "$DOCKER_BIN" logs --tail 60 "$CONTAINER_NAME" || true
+                exit 1
+              fi
+
+              HEALTH_STATUS="passed"
+            fi
+
+            cat > "$REPORT_FILE" <<EOF
+{
+  "action": "restore",
+  "status": "success",
+  "backup_id": "$RESTORED_BACKUP_ID",
+  "db_archive": "$(basename "$DB_ARCHIVE")",
+  "media_archive": "$(basename "$MEDIA_ARCHIVE")",
+  "db_archive_sha256": "$DB_ARCHIVE_HASH",
+  "media_archive_sha256": "$MEDIA_ARCHIVE_HASH",
+  "container_was_running": $RUNNING_BEFORE,
+  "health_check": "$HEALTH_STATUS",
+  "created_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+
+            echo "Restore complete"
+            echo "  Database archive: $DB_ARCHIVE"
+            echo "  Media archive: $MEDIA_ARCHIVE"
+            if [ "$RUNNING_BEFORE" -eq 1 ]; then
+              echo "  Container restarted: $CONTAINER_NAME"
+            else
+              echo "  Container was not running, so no restart was performed"
+            fi
+
+      - name: Collect restore report
+        shell: bash
+        env:
+          QNAP_HOST: ${{ secrets.QNAP_HOST }}
+          QNAP_PORT: ${{ secrets.QNAP_SSH_PORT }}
+          QNAP_USER: ${{ secrets.QNAP_USER }}
+          QNAP_KEY: ${{ secrets.QNAP_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp-reports
+          KEY_FILE=.tmp-reports/qnap_key
+          printf '%s\n' "$QNAP_KEY" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+
+          ssh -i "$KEY_FILE" -p "$QNAP_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            "$QNAP_USER@$QNAP_HOST" \
+            "cat /share/Container/travel-quizzer/backups/last_restore_report.json" \
+            > .tmp-reports/restore-report.json
+
+      - name: Upload restore report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: restore-report-${{ github.run_id }}
+          path: .tmp-reports/restore-report.json
+          if-no-files-found: error

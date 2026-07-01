@@ -120,6 +120,60 @@ uv run e2e-test
 | `SMTP_USE_TLS`      | Use TLS for SMTP connection (`"true"` enables, any other value uses plain SMTP) | `true`                            |
 | `ADMIN_EMAIL`       | Destination address for hint complaint emails                                   | _(none)_                          |
 
+## Weekly Backup and Restore Workflow
+
+The repository includes a GitHub Actions workflow at `.github/workflows/backup-qnap.yml` that performs weekly production backups on the QNAP host.
+
+### What it does
+
+- Runs automatically every Sunday at 02:15 UTC.
+- Creates compressed backups for:
+   - `/share/Container/travel-quizzer/database/quiz_data.db`
+   - `/share/Container/travel-quizzer/media`
+- Skips backup creation when neither the database nor media content changed since the previous backup.
+- Validates backup content by:
+   - running SQLite `PRAGMA quick_check` on the copied database
+   - verifying archive readability (`tar -tzf`)
+   - extracting and comparing checksums against source content
+- Stores backups on QNAP under `/share/Container/travel-quizzer/backups`.
+- Automatically prunes older backup sets and keeps the latest 12 complete snapshots.
+
+### Manual backup run
+
+From GitHub Actions, run workflow **QNAP Backup and Restore** with:
+
+- `action=backup`
+- `retention_count=12` (optional, must be a positive integer)
+
+### Manual restore (redeploy backup)
+
+From GitHub Actions, run workflow **QNAP Backup and Restore** with:
+
+- `action=restore`
+- `backup_id=`
+
+Set `backup_id` to a timestamp like `20260701T021500Z`, or leave it empty to restore the latest backup.
+
+The restore job validates the selected archives, replaces live database/media content, and restarts the `travel-quizzer` container if it was running.
+
+If the container was running before restore, the workflow also runs a post-restore health check against `/health` and fails the run if the app does not become healthy in time.
+
+### Backup and restore reports
+
+Each successful workflow run uploads a JSON artifact with execution details:
+
+- `backup-report-<run_id>` for backup runs
+- `restore-report-<run_id>` for restore runs
+
+Reports include backup identifier, selected archives, key checksums, and health-check status for restore.
+
+### Required GitHub secrets
+
+- `QNAP_HOST`
+- `QNAP_SSH_PORT`
+- `QNAP_USER`
+- `QNAP_SSH_KEY`
+
 ## Technologies Used
 
 - **Backend**: Flask (Python web framework)
