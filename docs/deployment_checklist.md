@@ -18,6 +18,8 @@ Configure these in the repository under **Settings → Secrets and variables →
 | `QNAP_USER` | SSH username on the QNAP |
 | `QNAP_SSH_KEY` | Private SSH key for deploy access |
 | `QNAP_GHCR_TOKEN` | GitHub PAT with `read:packages` scope |
+| `ADMIN_BOOTSTRAP_PASSWORD` | Non-default admin password seeded during deploy (required) |
+| `ADMIN_BOOTSTRAP_EMAIL` | Admin email to seed during deploy (optional, defaults to `admin@example.com`) |
 
 ### SSH Key Setup
 
@@ -91,13 +93,13 @@ Levels run 1 (easiest) through 5 (hardest). Current country IDs:
 
 ## Post-Deploy Verification
 
-- [ ] Check container logs:
+- [x] Check container logs (automated in deploy workflow "Verify deployment"):
   ```bash
   docker logs travel-quizzer
   ```
-- [ ] Confirm the app responds at `http://<qnap-ip>:9696`.
-- [ ] Log in with the seeded admin account (`admin@example.com` / `adminpass123`).
-- [ ] **Change the default admin password immediately** via the admin panel or by re-seeding.
+- [x] Confirm the app responds at `http://<qnap-ip>:9696` (automated health probe in deploy workflow).
+- [ ] Log in with the seeded admin account (`ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD`).
+- [x] Default admin password is not used in deploy workflow (custom bootstrap password is required).
 
 ---
 

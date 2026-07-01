@@ -28,6 +28,36 @@ DEFAULT_SEED_FILE = os.path.join(PROJECT_ROOT, "data", "countries.json")
 LEGACY_SEED_FILE = os.path.join(PROJECT_ROOT, "data", "destinations.json")
 
 
+def _resolve_admin_accounts():
+    """Resolve admin accounts to seed.
+
+    If ADMIN_BOOTSTRAP_PASSWORD is provided, only a single admin account is
+    seeded using ADMIN_BOOTSTRAP_EMAIL (defaults to admin@example.com).
+    If REQUIRE_CUSTOM_ADMIN_BOOTSTRAP is true and no custom password is set,
+    fail fast.
+    """
+    custom_email = os.environ.get("ADMIN_BOOTSTRAP_EMAIL", "").strip()
+    custom_password = os.environ.get("ADMIN_BOOTSTRAP_PASSWORD", "")
+    require_custom = os.environ.get("REQUIRE_CUSTOM_ADMIN_BOOTSTRAP", "").strip().lower() == "true"
+
+    if custom_password:
+        if len(custom_password) < 12:
+            raise ValueError("ADMIN_BOOTSTRAP_PASSWORD must be at least 12 characters")
+        if not custom_email:
+            custom_email = "admin@example.com"
+        return [(custom_email, custom_password)]
+
+    if require_custom:
+        raise RuntimeError(
+            "REQUIRE_CUSTOM_ADMIN_BOOTSTRAP=true requires ADMIN_BOOTSTRAP_PASSWORD to be set"
+        )
+
+    return [
+        ("admin@example.com", "adminpass123"),
+        ("admin@travel-quizzer.local", "admin123"),
+    ]
+
+
 def _load_destinations(path=None):
     """Load destination data from a JSON file.
 
@@ -62,16 +92,13 @@ def seed(destinations=None):
             db.create_all()
 
             # Seed admin user(s)
-            admin_accounts = [
-                ("admin@example.com", "adminpass123"),
-                ("admin@travel-quizzer.local", "admin123"),
-            ]
+            admin_accounts = _resolve_admin_accounts()
             for admin_email, admin_password in admin_accounts:
                 admin = User.query.filter_by(email=admin_email).first()
                 if admin:
                     admin.password_hash = generate_password_hash(admin_password)
                     admin.is_admin = True
-                    print(f"  Updated admin user: {admin_email} / {admin_password}")
+                    print(f"  Updated admin user: {admin_email}")
                 else:
                     admin = User(
                         name="Admin",
@@ -80,7 +107,7 @@ def seed(destinations=None):
                         is_admin=True,
                     )
                     db.session.add(admin)
-                    print(f"  Created admin user: {admin_email} / {admin_password}")
+                    print(f"  Created admin user: {admin_email}")
 
             db.session.commit()
 
@@ -142,7 +169,7 @@ def seed(destinations=None):
             print(
                 f"Seeded {added} destination(s). Total now: {Destination.query.count()}"
             )
-        except OperationalError as e:
+        except (OperationalError, RuntimeError, ValueError) as e:
             print(f"ERROR: Seed script failed - {e}", file=sys.stderr)
             sys.exit(1)
 

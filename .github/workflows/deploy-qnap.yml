@@ -260,7 +260,11 @@ jobs:
             }
 
             DOCKER_BIN=$(resolve_docker)
-            "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} /app/.venv/bin/python -m scripts.seed_db
+            "$DOCKER_BIN" exec \
+              -e ADMIN_BOOTSTRAP_EMAIL="${{ secrets.ADMIN_BOOTSTRAP_EMAIL }}" \
+              -e ADMIN_BOOTSTRAP_PASSWORD="${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}" \
+              -e REQUIRE_CUSTOM_ADMIN_BOOTSTRAP=true \
+              ${{ env.CONTAINER_NAME }} /app/.venv/bin/python -m scripts.seed_db
 
       - name: Verify deployment
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
@@ -288,6 +292,15 @@ jobs:
             }
 
             DOCKER_BIN=$(resolve_docker)
+
+            # Surface recent runtime logs and fail fast on obvious startup errors.
+            LOG_TAIL=$("$DOCKER_BIN" logs --tail 120 ${{ env.CONTAINER_NAME }} 2>&1 || true)
+            echo "Recent container logs (tail 120):"
+            echo "$LOG_TAIL"
+            if printf '%s\n' "$LOG_TAIL" | grep -Eiq 'Traceback \(most recent call last\)|Exception:'; then
+              echo "Detected exception traceback patterns in container logs after deploy."
+              exit 1
+            fi
 
             # Confirm the app responds on a public endpoint
             RESPONSE=$("$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health', timeout=5).read().decode('utf-8'))")
