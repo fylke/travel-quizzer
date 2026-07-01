@@ -1,6 +1,8 @@
 """Quiz blueprint — quiz flow, hints, and answer checking."""
 
+import os
 import random
+from pathlib import Path
 
 from flask import Blueprint, jsonify, request
 
@@ -9,6 +11,43 @@ from .models import Destination, QuizResult, db
 from .validation_rules import MAX_GUESSES, STARTING_HINT_DIFFICULTY
 
 quiz_bp = Blueprint("quiz", __name__)
+
+
+RESULT_IMAGE_PREFIX = "0"
+RESULT_IMAGE_MAX_COUNT = 10
+RESULT_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+
+
+def _media_root() -> Path:
+    """Return the media root directory from env or project default."""
+    default_media = Path(__file__).resolve().parent.parent / "media"
+    return Path(os.environ.get("MEDIA_DIR", str(default_media)))
+
+
+def _result_images_for_destination(destination_id: int) -> list[str]:
+    """Return up to 10 result image URLs for a destination.
+
+    Result images are discovered from media/countries/<id>/ files that start
+    with "0" (for example: 01.jpg, 0a.png).
+    """
+    destination_dir = _media_root() / "countries" / str(destination_id)
+    if not destination_dir.is_dir():
+        return []
+
+    images: list[str] = []
+    for file_path in sorted(destination_dir.iterdir(), key=lambda p: p.name):
+        if not file_path.is_file():
+            continue
+        if not file_path.name.startswith(RESULT_IMAGE_PREFIX):
+            continue
+        if file_path.suffix.lower() not in RESULT_IMAGE_EXTENSIONS:
+            continue
+
+        images.append(f"/media/countries/{destination_id}/{file_path.name}")
+        if len(images) >= RESULT_IMAGE_MAX_COUNT:
+            break
+
+    return images
 
 
 def _start_quiz(user, destination):
@@ -124,14 +163,28 @@ def check_answer():
         points = quiz_result.hint_difficulty * quiz_result.remaining_guesses
         quiz_result.ongoing = False
         db.session.commit()
-        return jsonify({"correct": True, "answer": question.name, "points": points})
+        return jsonify(
+            {
+                "correct": True,
+                "answer": question.name,
+                "points": points,
+                "resultImages": _result_images_for_destination(question.id),
+            }
+        )
 
     # Wrong answer — decrement remaining guesses
     quiz_result.remaining_guesses -= 1
     if quiz_result.remaining_guesses <= 0:
         quiz_result.ongoing = False
         db.session.commit()
-        return jsonify({"correct": False, "answer": question.name, "points": 0})
+        return jsonify(
+            {
+                "correct": False,
+                "answer": question.name,
+                "points": 0,
+                "resultImages": _result_images_for_destination(question.id),
+            }
+        )
 
     # Still has guesses left — also reveal next hint
     new_difficulty = quiz_result.hint_difficulty - 1

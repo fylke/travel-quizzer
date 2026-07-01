@@ -18,7 +18,11 @@ def _register_and_start(page: Page, base_url: str, name: str = "Quizzer"):
     page.fill("#password", "password123")
     page.click("#authButton")
     expect(page.locator("#statusScreen")).to_be_visible(timeout=5000)
-    page.click("#runRandomQuizBtn")
+
+    quiz_type_button = page.locator(".quiz-type-btn").first
+    expect(quiz_type_button).to_be_visible(timeout=5000)
+    quiz_type_button.click()
+
     expect(page.locator("#quizScreen")).to_be_visible(timeout=5000)
     # Wait for the quiz data to actually load (hint text appears)
     expect(page.locator("#hint")).not_to_be_empty(timeout=5000)
@@ -79,3 +83,19 @@ def test_skip_hint_button(page: Page, base_url: str):
     # The hint text should have changed (or same if there's an error)
     # Just verify the page didn't crash
     expect(page.locator("#quizScreen")).to_be_visible()
+
+
+def test_results_screen_shows_up_to_ten_zero_prefixed_images(page: Page, base_url: str):
+    """Completed quiz shows at most 10 additional result images from 0* files."""
+    _register_and_start(page, base_url)
+
+    page.fill("#answerInput", "Paris")
+    page.click("text=Submit Answer")
+    expect(page.locator("#feedbackScreen")).to_be_visible(timeout=5000)
+
+    # Feedback view currently has no direct transition button to results.
+    page.evaluate("endQuiz()")
+
+    expect(page.locator("#resultsScreen")).to_be_visible(timeout=5000)
+    expect(page.locator("#resultImages")).to_be_visible(timeout=5000)
+    expect(page.locator("#resultImages .result-image")).to_have_count(10)

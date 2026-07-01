@@ -284,6 +284,34 @@ function updateHintDisplay(hintText, hintDifficulty, remainingGuesses) {
     document.getElementById('hintPoints').textContent = `If you guess correctly, you will get ${potentialPoints} points.`;
 }
 
+function renderResultImages(imageUrls) {
+    const container = document.getElementById('resultImages');
+    if (!container) return;
+
+    const images = Array.isArray(imageUrls) ? imageUrls.slice(0, 10) : [];
+    container.innerHTML = '';
+
+    if (images.length === 0) {
+        container.classList.add('hidden');
+        return;
+    }
+
+    container.classList.remove('hidden');
+    images.forEach((url, index) => {
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'result-image-container';
+
+        const image = document.createElement('img');
+        image.className = 'result-image';
+        image.src = url;
+        image.alt = `Additional destination image ${index + 1}`;
+        image.loading = 'lazy';
+
+        imageContainer.appendChild(image);
+        container.appendChild(imageContainer);
+    });
+}
+
 async function submitAnswer() {
     if (submitting) return;
 
@@ -311,7 +339,7 @@ async function submitAnswer() {
         }
 
         if (result.correct) {
-            showFeedback(true, result.points, result.answer);
+            showFeedback(true, result.points, result.answer, result.resultImages || []);
         } else if (result.remainingGuesses !== undefined && result.remainingGuesses > 0) {
             // Wrong but still has guesses — backend returned next hint
             animateWrongGuess(answerInput);
@@ -321,7 +349,7 @@ async function submitAnswer() {
             submitting = false;
         } else {
             // Out of guesses
-            showFeedback(false, 0, result.answer);
+            showFeedback(false, 0, result.answer, result.resultImages || []);
         }
     } catch (error) {
         console.error('Error checking answer:', error);
@@ -357,7 +385,7 @@ async function fetchHint() {
     }
 }
 
-function showFeedback(isCorrect, points, correctAnswer) {
+function showFeedback(isCorrect, points, correctAnswer, resultImages = []) {
     showScreen('feedbackScreen');
 
     const feedbackStatus = document.getElementById('feedbackStatus');
@@ -381,11 +409,20 @@ function showFeedback(isCorrect, points, correctAnswer) {
 
     // Store points in a data attribute for the results screen
     document.getElementById('feedbackScreen').dataset.lastScore = points;
+    document.getElementById('feedbackScreen').dataset.resultImages = JSON.stringify(resultImages);
 }
 
 function endQuiz() {
     showScreen('resultsScreen');
+    const feedbackScreen = document.getElementById('feedbackScreen');
     const score = parseInt(document.getElementById('feedbackScreen').dataset.lastScore || '0', 10);
+    let resultImages = [];
+    try {
+        resultImages = JSON.parse(feedbackScreen.dataset.resultImages || '[]');
+    } catch (_error) {
+        resultImages = [];
+    }
+
     document.getElementById('finalScore').textContent = score;
 
     let message = '';
@@ -402,6 +439,7 @@ function endQuiz() {
     }
 
     document.getElementById('resultsMessage').textContent = message;
+    renderResultImages(resultImages);
 }
 
 function retakeQuiz() {

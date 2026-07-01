@@ -23,7 +23,11 @@ def _register_and_start(page: Page, base_url: str):
     page.fill("#password", "password123")
     page.click("#authButton")
     expect(page.locator("#statusScreen")).to_be_visible(timeout=5000)
-    page.click("#runRandomQuizBtn")
+
+    quiz_type_button = page.locator(".quiz-type-btn").first
+    expect(quiz_type_button).to_be_visible(timeout=5000)
+    quiz_type_button.click()
+
     expect(page.locator("#quizScreen")).to_be_visible(timeout=5000)
     expect(page.locator("#hint")).not_to_be_empty(timeout=5000)
 

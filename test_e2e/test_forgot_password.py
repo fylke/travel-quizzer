@@ -1,7 +1,7 @@
 """End-to-end tests for the forgot-password flow."""
 
 import hashlib
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -29,7 +29,7 @@ def setup(clean_db):
 @pytest.fixture(autouse=True)
 def mock_email_service():
     """Mock the email service so e2e tests don't need real SMTP."""
-    with patch("backend.send_password_reset_email") as mock_send:
+    with patch("backend.routes_auth.send_password_reset_email") as mock_send:
         yield mock_send
 
 
@@ -52,11 +52,12 @@ def seeded_user():
 def seeded_valid_token(seeded_user):
     """Seed a valid (non-expired, non-consumed) reset token into the DB."""
     with app.app_context():
+        now = datetime.now(UTC).replace(tzinfo=None)
         token = PasswordResetToken(
             user_id=seeded_user["id"],
             token_hash=_TOKEN_HASH,
-            created_at=datetime.utcnow(),
-            expires_at=datetime.utcnow() + timedelta(minutes=15),
+            created_at=now,
+            expires_at=now + timedelta(minutes=15),
             consumed=False,
         )
         db.session.add(token)

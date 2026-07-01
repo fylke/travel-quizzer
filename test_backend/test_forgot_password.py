@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
@@ -41,7 +41,7 @@ class TestPasswordResetTokenSchema(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
 
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         duplicate_hash = "abcdef1234567890" * 4  # 64 chars
         token1 = PasswordResetToken(
             user_id=user.id,
@@ -71,7 +71,7 @@ class TestPasswordResetTokenSchema(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
 
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         token = PasswordResetToken(
             user_id=user.id,
             token_hash="a" * 64,
@@ -93,7 +93,7 @@ class TestPasswordResetTokenSchema(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
 
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         token = PasswordResetToken(
             user_id=user.id,
             token_hash="b" * 64,
@@ -152,7 +152,7 @@ class TestUserPasswordChangedAt(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
 
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         user.password_changed_at = now
         db.session.commit()
 
@@ -427,7 +427,7 @@ class TestForgotPasswordAPIRoutes(unittest.TestCase):
 
         raw = "expiredtoken123"
         token_hash = hashlib.sha256(raw.encode()).hexdigest()
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         token_record = PasswordResetToken(
             user_id=self.user.id,
             token_hash=token_hash,
@@ -451,7 +451,7 @@ class TestForgotPasswordAPIRoutes(unittest.TestCase):
 
         raw = "consumedtoken456"
         token_hash = hashlib.sha256(raw.encode()).hexdigest()
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         token_record = PasswordResetToken(
             user_id=self.user.id,
             token_hash=token_hash,
@@ -512,7 +512,7 @@ class TestForgotPasswordAPIRoutes(unittest.TestCase):
 
         raw = "expiredresettoken"
         token_hash = hashlib.sha256(raw.encode()).hexdigest()
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         token_record = PasswordResetToken(
             user_id=self.user.id,
             token_hash=token_hash,
@@ -539,7 +539,7 @@ class TestForgotPasswordAPIRoutes(unittest.TestCase):
 
         raw = "alreadyusedtoken"
         token_hash = hashlib.sha256(raw.encode()).hexdigest()
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         token_record = PasswordResetToken(
             user_id=self.user.id,
             token_hash=token_hash,
