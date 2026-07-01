@@ -391,7 +391,10 @@ class SecretKeyTestCase(unittest.TestCase):
 
     def test_production_raises_without_secret_key(self):
         """In production mode, missing SECRET_KEY should cause a RuntimeError."""
-        result = self._import_app_in_subprocess({'FLASK_ENV': 'production'})
+        result = self._import_app_in_subprocess({
+            'FLASK_ENV': 'production',
+            'CORS_ALLOWED_ORIGINS': 'https://myapp.example.com',
+        })
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('SECRET_KEY', result.stderr)
 
@@ -400,6 +403,7 @@ class SecretKeyTestCase(unittest.TestCase):
         result = self._import_app_in_subprocess({
             'FLASK_ENV': 'production',
             'SECRET_KEY': 'a-real-secret-key',
+            'CORS_ALLOWED_ORIGINS': 'https://myapp.example.com',
         })
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn('OK', result.stdout)
