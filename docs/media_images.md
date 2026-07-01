@@ -18,6 +18,15 @@ media/countries/3/5b.jpg
 
 The API returns these paths automatically based on the quiz type, destination ID, and current hint difficulty.
 
+### Result Screen Images
+
+When a quiz is finished (correct answer or out of guesses), the API can also return up to 10 additional images for the results screen.
+
+- Store these files in the same destination directory.
+- File names must start with `0` (for example: `01.jpg`, `02.jpg`, `0a.png`).
+- Supported extensions: `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`.
+- Files are returned in filename order, max 10 items.
+
 ## Setup
 
 1. Create the `media/` directory at the project root

@@ -192,6 +192,9 @@ def test_edit_destination(admin_page: Page):
 
     # Change the name
     admin_page.fill("#adminDestName", "Paris Updated")
+    image_inputs = admin_page.locator("#adminImagesContainer input")
+    image_inputs.nth(0).fill("https://example.com/paris1.jpg")
+    image_inputs.nth(1).fill("https://example.com/paris2.jpg")
 
     # Submit
     admin_page.locator("#adminForm button", has_text="Save").click()
@@ -208,6 +211,9 @@ def test_edit_destination(admin_page: Page):
     admin_page.locator(".admin-dest-item").first.locator("button", has_text="Edit").click()
     expect(admin_page.locator("#adminForm")).to_be_visible(timeout=3000)
     admin_page.fill("#adminDestName", "Paris")
+    image_inputs = admin_page.locator("#adminImagesContainer input")
+    image_inputs.nth(0).fill("https://example.com/paris1.jpg")
+    image_inputs.nth(1).fill("https://example.com/paris2.jpg")
     admin_page.locator("#adminForm button", has_text="Save").click()
     expect(admin_page.locator("#adminSuccess")).to_be_visible(timeout=3000)
 

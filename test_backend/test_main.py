@@ -1,6 +1,8 @@
 import os
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -148,6 +150,40 @@ class MainAppTestCase(unittest.TestCase):
         self.assertTrue(data['correct'])
         self.assertEqual(data['points'], 15)  # Hint difficulty (5) * Remaining guesses (3)
         self.assertEqual(data['answer'], question['destination'])
+
+    def test_check_answer_returns_up_to_ten_result_images_with_zero_prefix(self):
+        question = self.quiz_data[0]
+
+        with tempfile.TemporaryDirectory() as temp_media:
+            original_media_dir = os.environ.get('MEDIA_DIR')
+            os.environ['MEDIA_DIR'] = temp_media
+
+            destination_media_dir = Path(temp_media) / 'countries' / str(question['id'])
+            destination_media_dir.mkdir(parents=True, exist_ok=True)
+
+            # Create 12 valid "0*" images and one non-matching file; API must cap at 10.
+            for index in range(1, 13):
+                (destination_media_dir / f'0{index:02d}.jpg').write_bytes(b'test-image')
+            (destination_media_dir / '1a.jpg').write_bytes(b'ignored-hint-image')
+
+            try:
+                self.client.get(f'/api/quiz/{question["id"]}')
+
+                response = self.client.post('/api/check-answer', json={
+                    'answer': question['correct_answers'][0]
+                })
+                self.assertEqual(response.status_code, 200)
+
+                data = response.get_json()
+                self.assertTrue(data['correct'])
+                self.assertIn('resultImages', data)
+                self.assertEqual(len(data['resultImages']), 10)
+                self.assertTrue(all(path.startswith(f"/media/countries/{question['id']}/0") for path in data['resultImages']))
+            finally:
+                if original_media_dir is None:
+                    os.environ.pop('MEDIA_DIR', None)
+                else:
+                    os.environ['MEDIA_DIR'] = original_media_dir
 
     def test_check_answer_returns_incorrect_for_invalid_answer(self):
         question = self.quiz_data[0]
