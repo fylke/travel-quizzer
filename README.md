@@ -174,6 +174,10 @@ Reports include backup identifier, selected archives, key checksums, and health-
 - `QNAP_USER`
 - `QNAP_SSH_KEY`
 
+## Operations Runbooks
+
+- Rollback procedure: [docs/rollback_procedure.md](docs/rollback_procedure.md)
+
 ## Technologies Used
 
 - **Backend**: Flask (Python web framework)

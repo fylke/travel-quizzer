@@ -1,0 +1,139 @@
+name: Rollback QNAP Deployment
+
+'on':
+  workflow_dispatch:
+    inputs:
+      generation:
+        description: "Rollback generation to restore (1 is most recent)"
+        required: true
+        default: "1"
+        type: choice
+        options:
+          - "1"
+          - "2"
+          - "3"
+
+env:
+  CONTAINER_NAME: travel-quizzer
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Roll back to previous container via SSH
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
+        with:
+          host: ${{ secrets.QNAP_HOST }}
+          port: ${{ secrets.QNAP_SSH_PORT }}
+          username: ${{ secrets.QNAP_USER }}
+          key: ${{ secrets.QNAP_SSH_KEY }}
+          script: |
+            resolve_docker() {
+              if command -v docker >/dev/null 2>&1; then
+                command -v docker
+                return 0
+              fi
+              for candidate in \
+                /share/CACHEDEV2_DATA/.qpkg/container-station/bin/docker \
+                /share/CACHEDEV2_DATA/.qpkg/ContainerStation/bin/docker; do
+                if [ -x "$candidate" ]; then
+                  echo "$candidate"
+                  return 0
+                fi
+              done
+              echo "Docker CLI not found on QNAP host" >&2
+              return 1
+            }
+
+            DOCKER_BIN=$(resolve_docker)
+            ROLLBACK_DEPTH=3
+            GEN=${{ inputs.generation }}
+            SOURCE_CONTAINER="${{ env.CONTAINER_NAME }}-rollback-$GEN"
+            CURRENT_BACKUP="${{ env.CONTAINER_NAME }}-rollback-current"
+
+            if ! "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$SOURCE_CONTAINER" >/dev/null 2>&1; then
+              echo "No rollback generation found for $SOURCE_CONTAINER."
+              exit 1
+            fi
+
+            if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$CURRENT_BACKUP" >/dev/null 2>&1; then
+              "$DOCKER_BIN" rm -f "$CURRENT_BACKUP" >/dev/null 2>&1 || true
+            fi
+
+            if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "${{ env.CONTAINER_NAME }}" >/dev/null 2>&1; then
+              "$DOCKER_BIN" stop ${{ env.CONTAINER_NAME }} >/dev/null 2>&1 || true
+              "$DOCKER_BIN" rename ${{ env.CONTAINER_NAME }} "$CURRENT_BACKUP"
+            fi
+
+            "$DOCKER_BIN" rename "$SOURCE_CONTAINER" ${{ env.CONTAINER_NAME }}
+            "$DOCKER_BIN" start ${{ env.CONTAINER_NAME }}
+
+            echo "Waiting for rolled-back container to become ready..."
+            READY=0
+            for i in $(seq 1 24); do
+              if "$DOCKER_BIN" exec ${{ env.CONTAINER_NAME }} python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=5)" >/dev/null 2>&1; then
+                READY=1
+                break
+              fi
+              echo "  Attempt $i/24: not ready yet"
+              sleep 5
+            done
+
+            if [ "$READY" -ne 1 ]; then
+              echo "Rollback container did not become ready within timeout."
+              "$DOCKER_BIN" logs --tail 80 ${{ env.CONTAINER_NAME }}
+
+              # Restore original current container if rollback failed.
+              "$DOCKER_BIN" rm -f ${{ env.CONTAINER_NAME }} >/dev/null 2>&1 || true
+              if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$CURRENT_BACKUP" >/dev/null 2>&1; then
+                "$DOCKER_BIN" rename "$CURRENT_BACKUP" ${{ env.CONTAINER_NAME }}
+                "$DOCKER_BIN" start ${{ env.CONTAINER_NAME }} >/dev/null 2>&1 || true
+              fi
+              exit 1
+            fi
+
+            # Reinsert the displaced container as generation 1 and shift older backups.
+            if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$CURRENT_BACKUP" >/dev/null 2>&1; then
+              OLDEST="${{ env.CONTAINER_NAME }}-rollback-$ROLLBACK_DEPTH"
+              if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$OLDEST" >/dev/null 2>&1; then
+                "$DOCKER_BIN" rm -f "$OLDEST" >/dev/null 2>&1 || true
+              fi
+
+              for i in $(seq "$ROLLBACK_DEPTH" -1 2); do
+                SRC="${{ env.CONTAINER_NAME }}-rollback-$((i-1))"
+                DST="${{ env.CONTAINER_NAME }}-rollback-$i"
+                if "$DOCKER_BIN" ps -a --format '{{.Names}}' | grep -Fx "$SRC" >/dev/null 2>&1; then
+                  "$DOCKER_BIN" rename "$SRC" "$DST"
+                fi
+              done
+
+              "$DOCKER_BIN" rename "$CURRENT_BACKUP" "${{ env.CONTAINER_NAME }}-rollback-1"
+            fi
+
+            echo "Rollback completed successfully."
+
+      - name: Notify on rollback failure
+        if: failure()
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const title = `[rollback] QNAP rollback failed (generation ${{ inputs.generation }})`;
+            const body = [
+              `Manual rollback workflow failed for generation ${{ inputs.generation }}.`,
+              '',
+              `Run URL: ${runUrl}`,
+              `Commit: ${context.sha}`,
+              `Actor: ${context.actor}`,
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['incident', 'rollback'],
+            });
