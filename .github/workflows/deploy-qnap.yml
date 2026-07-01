@@ -146,6 +146,17 @@ jobs:
 
             DOCKER_BIN=$(resolve_docker)
 
+            APP_BASE_DIR="/share/Container/travel-quizzer"
+            DB_DIR="$APP_BASE_DIR/database"
+            DB_FILE="$DB_DIR/quiz_data.db"
+
+            # Ensure sqlite path is writable by the container runtime user.
+            mkdir -p "$DB_DIR"
+            [ -f "$DB_FILE" ] || touch "$DB_FILE"
+            chmod 770 "$DB_DIR" || true
+            chmod 660 "$DB_FILE" || true
+            chown 10001:10001 "$DB_DIR" "$DB_FILE" || true
+
             # Log in to GHCR
             echo "${{ secrets.QNAP_GHCR_TOKEN }}" | "$DOCKER_BIN" login ghcr.io -u ${{ github.actor }} --password-stdin
 
