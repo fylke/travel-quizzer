@@ -17,6 +17,7 @@ import os
 # Ensure the project root is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from werkzeug.security import generate_password_hash
 
@@ -26,6 +27,31 @@ from backend.models import db, Destination, User
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_SEED_FILE = os.path.join(PROJECT_ROOT, "data", "countries.json")
 LEGACY_SEED_FILE = os.path.join(PROJECT_ROOT, "data", "destinations.json")
+
+
+def _ensure_legacy_sqlite_schema_compatibility():
+    """Apply minimal schema upgrades for legacy SQLite databases.
+
+    SQLite ``create_all`` does not alter existing tables, so older databases
+    may miss columns introduced later. Keep this narrowly scoped to known
+    compatibility gaps needed by startup/seed paths.
+    """
+    if db.engine.dialect.name != "sqlite":
+        return
+
+    user_table_exists = db.session.execute(
+        text("SELECT name FROM sqlite_master WHERE type='table' AND name='user'")
+    ).scalar()
+    if not user_table_exists:
+        return
+
+    user_columns = {
+        row[1] for row in db.session.execute(text('PRAGMA table_info("user")')).all()
+    }
+    if "password_changed_at" not in user_columns:
+        db.session.execute(text('ALTER TABLE "user" ADD COLUMN password_changed_at DATETIME'))
+        db.session.commit()
+        print("  Added missing user.password_changed_at column for legacy schema")
 
 
 def _resolve_admin_accounts():
@@ -90,6 +116,7 @@ def seed(destinations=None):
     with app.app_context():
         try:
             db.create_all()
+            _ensure_legacy_sqlite_schema_compatibility()
 
             # Seed admin user(s)
             admin_accounts = _resolve_admin_accounts()

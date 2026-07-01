@@ -7,6 +7,7 @@ Validates:
 
 import os
 import unittest
+from sqlalchemy import text
 
 # Ensure in-memory SQLite is used before importing anything from backend
 os.environ["QUIZ_DATABASE_URL"] = "sqlite:///:memory:"
@@ -83,6 +84,36 @@ class TestSeedEmptyDatabase(unittest.TestCase):
                 self.assertTrue(dest.hint5, f"Destination {dest.id} has empty hint5")
                 self.assertIsInstance(dest.correct_answers, list)
                 self.assertGreater(len(dest.correct_answers), 0)
+
+    def test_seed_upgrades_legacy_user_table_missing_password_changed_at(self):
+        """Seeding upgrades legacy SQLite schema that lacks user.password_changed_at."""
+        from scripts.seed_db import seed
+
+        with app.app_context():
+            db.drop_all()
+            db.session.execute(
+                text(
+                    """
+                    CREATE TABLE user (
+                        id INTEGER NOT NULL PRIMARY KEY,
+                        password_hash VARCHAR(256) NOT NULL,
+                        name VARCHAR(128) NOT NULL,
+                        email VARCHAR(128) NOT NULL UNIQUE,
+                        is_admin BOOLEAN NOT NULL DEFAULT 0
+                    )
+                    """
+                )
+            )
+            db.session.commit()
+
+        seed(destinations=TEST_DESTINATIONS)
+
+        with app.app_context():
+            columns = {
+                row[1] for row in db.session.execute(text('PRAGMA table_info("user")')).all()
+            }
+            self.assertIn("password_changed_at", columns)
+            self.assertGreaterEqual(User.query.filter_by(is_admin=True).count(), 1)
 
 
 if __name__ == "__main__":
