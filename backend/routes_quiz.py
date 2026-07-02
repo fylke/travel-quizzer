@@ -53,6 +53,14 @@ def _result_images_for_destination(destination_id: int) -> list[str]:
     return images
 
 
+def _hint_images_for_destination(destination_id: int, hint_difficulty: int) -> list[str]:
+    """Return the two quiz image URLs for a destination and hint difficulty."""
+    return [
+        f"/media/countries/{destination_id}/{hint_difficulty}a.jpg",
+        f"/media/countries/{destination_id}/{hint_difficulty}b.jpg",
+    ]
+
+
 def _start_quiz(user, destination):
     """Set up server-side state for a new quiz and return the response dict.
 
@@ -81,10 +89,7 @@ def _start_quiz(user, destination):
         "hint": hint_text,
         "hintDifficulty": hint_difficulty,
         "remainingGuesses": MAX_GUESSES,
-        "images": [
-            f"/media/countries/{destination.id}/{hint_difficulty}a.jpg",
-            f"/media/countries/{destination.id}/{hint_difficulty}b.jpg",
-        ],
+        "images": _hint_images_for_destination(destination.id, hint_difficulty),
     }
 
 
@@ -140,6 +145,7 @@ def get_hint():
             "hint": hint_text,
             "hintDifficulty": new_difficulty,
             "remainingGuesses": quiz_result.remaining_guesses,
+            "images": _hint_images_for_destination(question.id, new_difficulty),
         }
     )
 
@@ -203,6 +209,9 @@ def check_answer():
             "remainingGuesses": quiz_result.remaining_guesses,
             "hintDifficulty": quiz_result.hint_difficulty,
             "hint": hint_text,
+            "images": _hint_images_for_destination(
+                question.id, quiz_result.hint_difficulty
+            ),
         }
     )
 

@@ -260,10 +260,32 @@ function displayQuiz(data) {
     resetHintReviewState();
     quizState.currentQuizId = Number(data.id) || null;
     updateHintDisplay(data.hint, data.hintDifficulty, data.remainingGuesses);
-    wireZoomableImage(document.getElementById('image1'), data.images[0], 'Destination image 1');
-    wireZoomableImage(document.getElementById('image2'), data.images[1], 'Destination image 2');
+    const initialImages = Array.isArray(data.images) && data.images.length >= 2
+        ? data.images
+        : getHintImageUrls(quizState.currentQuizId, data.hintDifficulty);
+    renderQuizImages(initialImages);
     document.getElementById('answerInput').value = '';
     document.getElementById('answerInput').focus();
+}
+
+function getHintImageUrls(quizId, hintDifficulty) {
+    const parsedQuizId = Number(quizId);
+    const parsedDifficulty = Number(hintDifficulty);
+    if (!Number.isFinite(parsedQuizId) || !Number.isFinite(parsedDifficulty)) {
+        return [];
+    }
+    return [
+        `/media/countries/${parsedQuizId}/${parsedDifficulty}a.jpg`,
+        `/media/countries/${parsedQuizId}/${parsedDifficulty}b.jpg`
+    ];
+}
+
+function renderQuizImages(images) {
+    if (!Array.isArray(images) || images.length < 2) {
+        return;
+    }
+    wireZoomableImage(document.getElementById('image1'), images[0], 'Destination image 1');
+    wireZoomableImage(document.getElementById('image2'), images[1], 'Destination image 2');
 }
 
 async function loadQuestion() {
@@ -456,6 +478,10 @@ async function submitAnswer() {
             // Wrong but still has guesses — backend returned next hint
             animateWrongGuess(answerInput);
             updateHintDisplay(result.hint, result.hintDifficulty, result.remainingGuesses);
+            const nextHintImages = Array.isArray(result.images) && result.images.length >= 2
+                ? result.images
+                : getHintImageUrls(quizState.currentQuizId, result.hintDifficulty);
+            renderQuizImages(nextHintImages);
             document.getElementById('answerInput').value = '';
             document.getElementById('answerInput').focus();
             submitting = false;
@@ -489,6 +515,10 @@ async function fetchHint() {
             throw new Error(result.error || 'Failed to fetch hint');
         }
         updateHintDisplay(result.hint, result.hintDifficulty, result.remainingGuesses);
+        const nextHintImages = Array.isArray(result.images) && result.images.length >= 2
+            ? result.images
+            : getHintImageUrls(quizState.currentQuizId, result.hintDifficulty);
+        renderQuizImages(nextHintImages);
         document.getElementById('answerInput').value = '';
         document.getElementById('answerInput').focus();
     } catch (error) {

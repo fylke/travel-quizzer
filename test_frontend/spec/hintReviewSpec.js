@@ -1,7 +1,9 @@
 describe('Hint Review', function () {
     var fixtureContainer;
+    var originalFetch;
 
     beforeEach(function () {
+        originalFetch = window.fetch;
         fixtureContainer = document.createElement('div');
         fixtureContainer.id = 'hintReviewFixture';
         fixtureContainer.innerHTML =
@@ -26,6 +28,7 @@ describe('Hint Review', function () {
     });
 
     afterEach(function () {
+        window.fetch = originalFetch;
         resetHintReviewState();
         if (fixtureContainer && fixtureContainer.parentNode) {
             fixtureContainer.remove();
@@ -56,5 +59,40 @@ describe('Hint Review', function () {
         expect(document.getElementById('hint').textContent).toBe('Harder hint');
         expect(document.getElementById('hintProgress').textContent).toContain('Reviewing hint difficulty 5');
         expect(document.getElementById('hintPoints').textContent).toContain('16 points');
+    });
+
+    it('updates quiz images when skipping to a new hint', function (done) {
+        displayQuiz({
+            id: 12,
+            hint: 'Starting hint',
+            hintDifficulty: 5,
+            remainingGuesses: 3,
+            images: ['/media/countries/12/5a.jpg', '/media/countries/12/5b.jpg']
+        });
+
+        window.fetch = function (url) {
+            if (url.indexOf('/api/hint') !== -1) {
+                return Promise.resolve({
+                    ok: true,
+                    json: function () {
+                        return Promise.resolve({
+                            hint: 'Easier hint',
+                            hintDifficulty: 4,
+                            remainingGuesses: 3,
+                            images: ['/media/countries/12/4a.jpg', '/media/countries/12/4b.jpg']
+                        });
+                    }
+                });
+            }
+            return Promise.resolve({ ok: true, json: function () { return Promise.resolve({}); } });
+        };
+
+        fetchHint().then(function () {
+            expect(document.getElementById('image1').src).toContain('/media/countries/12/4a.jpg');
+            expect(document.getElementById('image2').src).toContain('/media/countries/12/4b.jpg');
+            done();
+        }).catch(function (error) {
+            done.fail(error);
+        });
     });
 });
