@@ -314,6 +314,7 @@ function updateHintDisplay(hintText, hintDifficulty, remainingGuesses) {
         return;
     }
 
+    updateHintCounter(difficulty);
     addHintToHistory(hintText, difficulty);
     quizState.liveHintDifficulty = difficulty;
     quizState.liveRemainingGuesses = guesses;
@@ -321,6 +322,18 @@ function updateHintDisplay(hintText, hintDifficulty, remainingGuesses) {
 
     renderHintReviewControls();
     renderHintFromState();
+}
+
+function updateHintCounter(hintDifficulty) {
+    const counterEl = document.getElementById('currentHint');
+    if (!counterEl) {
+        return;
+    }
+
+    const totalHints = Number(validationRules.destination?.hintCount) || 5;
+    const currentHintNumber = (totalHints - hintDifficulty) + 1;
+    const clampedHintNumber = Math.min(totalHints, Math.max(1, currentHintNumber));
+    counterEl.textContent = String(clampedHintNumber);
 }
 
 function resetHintReviewState() {

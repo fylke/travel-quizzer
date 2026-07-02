@@ -8,13 +8,16 @@ describe('Hint Review', function () {
         fixtureContainer.id = 'hintReviewFixture';
         fixtureContainer.innerHTML =
             '<div id="quizScreen" class="screen">' +
+                '<div class="progress-info">' +
+                    '<span>Hint <span id="currentHint">1</span> out of 5</span>' +
+                '</div>' +
                 '<div class="hint-section"><h2 id="hint"></h2></div>' +
                 '<div class="hint-meta">' +
                     '<span id="hintProgress"></span>' +
                     '<span id="hintPoints"></span>' +
                 '</div>' +
                 '<div class="hint-review hidden" id="hintReviewSection">' +
-                    '<span class="hint-review-label">Review unlocked hints:</span>' +
+                    '<span class="hint-review-label">Review previous hints</span>' +
                     '<div id="hintHistoryButtons" class="hint-history-buttons"></div>' +
                 '</div>' +
                 '<input id="answerInput" />' +
@@ -94,5 +97,16 @@ describe('Hint Review', function () {
         }).catch(function (error) {
             done.fail(error);
         });
+    });
+
+    it('updates the top hint counter when moving to easier hints', function () {
+        updateHintDisplay('Hardest hint', 5, 3);
+        expect(document.getElementById('currentHint').textContent).toBe('1');
+
+        updateHintDisplay('Second hint', 4, 3);
+        expect(document.getElementById('currentHint').textContent).toBe('2');
+
+        updateHintDisplay('Third hint', 3, 2);
+        expect(document.getElementById('currentHint').textContent).toBe('3');
     });
 });

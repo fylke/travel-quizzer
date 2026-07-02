@@ -109,8 +109,7 @@
         <div id="quizScreen" class="screen hidden">
             <div class="quiz-header">
                 <div class="progress-info">
-                    <span>Question <span id="currentQuestion">1</span> of 5</span>
-                    <span id="scoreDisplay">Score: 0</span>
+                    <span>Hint <span id="currentHint">1</span> out of 5</span>
                 </div>
                 <div class="progress-bar">
                     <div id="progressFill" class="progress-fill"></div>
@@ -136,7 +135,7 @@
                 </div>
 
                 <div class="hint-review hidden" id="hintReviewSection" aria-live="polite">
-                    <span class="hint-review-label">Review unlocked hints:</span>
+                    <span class="hint-review-label">Review previous hints</span>
                     <div id="hintHistoryButtons" class="hint-history-buttons"></div>
                 </div>
                 <p class="hint-complaint-link-wrap">
@@ -152,7 +151,7 @@
                     >
                     <div class="button-group">
                         <button onclick="submitAnswer()" class="btn btn-primary">Submit Answer</button>
-                        <button onclick="skipHint()" class="btn btn-secondary">Skip Hint</button>
+                        <button onclick="skipHint()" class="btn btn-secondary">Next Hint</button>
                     </div>
                 </div>
             </div>
