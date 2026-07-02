@@ -1,18 +1,23 @@
 describe('Hint Review', function () {
     var fixtureContainer;
+    var originalFetch;
 
     beforeEach(function () {
+        originalFetch = window.fetch;
         fixtureContainer = document.createElement('div');
         fixtureContainer.id = 'hintReviewFixture';
         fixtureContainer.innerHTML =
             '<div id="quizScreen" class="screen">' +
+                '<div class="progress-info">' +
+                    '<span>Hint <span id="currentHint">1</span> out of 5</span>' +
+                '</div>' +
                 '<div class="hint-section"><h2 id="hint"></h2></div>' +
                 '<div class="hint-meta">' +
                     '<span id="hintProgress"></span>' +
                     '<span id="hintPoints"></span>' +
                 '</div>' +
                 '<div class="hint-review hidden" id="hintReviewSection">' +
-                    '<span class="hint-review-label">Review unlocked hints:</span>' +
+                    '<span class="hint-review-label">Review previous hints</span>' +
                     '<div id="hintHistoryButtons" class="hint-history-buttons"></div>' +
                 '</div>' +
                 '<input id="answerInput" />' +
@@ -26,6 +31,7 @@ describe('Hint Review', function () {
     });
 
     afterEach(function () {
+        window.fetch = originalFetch;
         resetHintReviewState();
         if (fixtureContainer && fixtureContainer.parentNode) {
             fixtureContainer.remove();
@@ -56,5 +62,51 @@ describe('Hint Review', function () {
         expect(document.getElementById('hint').textContent).toBe('Harder hint');
         expect(document.getElementById('hintProgress').textContent).toContain('Reviewing hint difficulty 5');
         expect(document.getElementById('hintPoints').textContent).toContain('16 points');
+    });
+
+    it('updates quiz images when skipping to a new hint', function (done) {
+        displayQuiz({
+            id: 12,
+            hint: 'Starting hint',
+            hintDifficulty: 5,
+            remainingGuesses: 3,
+            images: ['/media/countries/12/5a.jpg', '/media/countries/12/5b.jpg']
+        });
+
+        window.fetch = function (url) {
+            if (url.indexOf('/api/hint') !== -1) {
+                return Promise.resolve({
+                    ok: true,
+                    json: function () {
+                        return Promise.resolve({
+                            hint: 'Easier hint',
+                            hintDifficulty: 4,
+                            remainingGuesses: 3,
+                            images: ['/media/countries/12/4a.jpg', '/media/countries/12/4b.jpg']
+                        });
+                    }
+                });
+            }
+            return Promise.resolve({ ok: true, json: function () { return Promise.resolve({}); } });
+        };
+
+        fetchHint().then(function () {
+            expect(document.getElementById('image1').src).toContain('/media/countries/12/4a.jpg');
+            expect(document.getElementById('image2').src).toContain('/media/countries/12/4b.jpg');
+            done();
+        }).catch(function (error) {
+            done.fail(error);
+        });
+    });
+
+    it('updates the top hint counter when moving to easier hints', function () {
+        updateHintDisplay('Hardest hint', 5, 3);
+        expect(document.getElementById('currentHint').textContent).toBe('1');
+
+        updateHintDisplay('Second hint', 4, 3);
+        expect(document.getElementById('currentHint').textContent).toBe('2');
+
+        updateHintDisplay('Third hint', 3, 2);
+        expect(document.getElementById('currentHint').textContent).toBe('3');
     });
 });

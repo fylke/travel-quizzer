@@ -201,6 +201,45 @@ class MainAppTestCase(unittest.TestCase):
         self.assertIn('remainingGuesses', data)
         self.assertEqual(data['remainingGuesses'], 2)
 
+    def test_get_hint_returns_updated_images_for_new_difficulty(self):
+        question = self.quiz_data[0]
+        self.client.get(f'/api/quiz/{question["id"]}')
+
+        response = self.client.get('/api/hint')
+        self.assertEqual(response.status_code, 200)
+
+        data = response.get_json()
+        self.assertEqual(data['hintDifficulty'], 4)
+        self.assertIn('images', data)
+        self.assertEqual(
+            data['images'],
+            [
+                f"/media/countries/{question['id']}/4a.jpg",
+                f"/media/countries/{question['id']}/4b.jpg",
+            ],
+        )
+
+    def test_check_answer_wrong_guess_returns_images_for_next_hint(self):
+        question = self.quiz_data[0]
+        self.client.get(f'/api/quiz/{question["id"]}')
+
+        response = self.client.post('/api/check-answer', json={
+            'answer': 'not a valid place'
+        })
+        self.assertEqual(response.status_code, 200)
+
+        data = response.get_json()
+        self.assertFalse(data['correct'])
+        self.assertEqual(data['hintDifficulty'], 4)
+        self.assertIn('images', data)
+        self.assertEqual(
+            data['images'],
+            [
+                f"/media/countries/{question['id']}/4a.jpg",
+                f"/media/countries/{question['id']}/4b.jpg",
+            ],
+        )
+
     def test_check_answer_returns_404_for_missing_question(self):
         # No active quiz — should get 404
         response = self.client.post('/api/check-answer', json={
