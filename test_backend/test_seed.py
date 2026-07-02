@@ -7,7 +7,9 @@ Validates:
 
 import os
 import unittest
+from unittest.mock import patch
 from sqlalchemy import text
+from werkzeug.security import generate_password_hash
 
 # Ensure in-memory SQLite is used before importing anything from backend
 os.environ["QUIZ_DATABASE_URL"] = "sqlite:///:memory:"
@@ -114,6 +116,54 @@ class TestSeedEmptyDatabase(unittest.TestCase):
             }
             self.assertIn("password_changed_at", columns)
             self.assertGreaterEqual(User.query.filter_by(is_admin=True).count(), 1)
+
+    def test_seed_preserves_existing_admin_when_custom_bootstrap_secret_missing(self):
+        """Custom bootstrap secret is only required when no admin already exists."""
+        from scripts.seed_db import seed
+
+        with app.app_context():
+            db.session.add(
+                User(
+                    name="Existing Admin",
+                    email="admin@example.com",
+                    password_hash=generate_password_hash("already-set-password"),
+                    is_admin=True,
+                )
+            )
+            db.session.commit()
+
+        with patch.dict(
+            os.environ,
+            {
+                "REQUIRE_CUSTOM_ADMIN_BOOTSTRAP": "true",
+                "ADMIN_BOOTSTRAP_PASSWORD": "",
+                "ADMIN_BOOTSTRAP_EMAIL": "",
+            },
+            clear=False,
+        ):
+            seed(destinations=TEST_DESTINATIONS)
+
+        with app.app_context():
+            self.assertEqual(User.query.filter_by(is_admin=True).count(), 1)
+            self.assertEqual(Destination.query.count(), len(TEST_DESTINATIONS))
+
+    def test_seed_requires_custom_bootstrap_secret_for_fresh_database(self):
+        """Fresh databases still fail fast when custom bootstrap is required but missing."""
+        from scripts.seed_db import seed
+
+        with patch.dict(
+            os.environ,
+            {
+                "REQUIRE_CUSTOM_ADMIN_BOOTSTRAP": "true",
+                "ADMIN_BOOTSTRAP_PASSWORD": "",
+                "ADMIN_BOOTSTRAP_EMAIL": "",
+            },
+            clear=False,
+        ):
+            with self.assertRaises(SystemExit) as ctx:
+                seed(destinations=TEST_DESTINATIONS)
+
+        self.assertEqual(ctx.exception.code, 1)
 
 
 if __name__ == "__main__":

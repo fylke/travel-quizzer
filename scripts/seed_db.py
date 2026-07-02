@@ -54,13 +54,13 @@ def _ensure_legacy_sqlite_schema_compatibility():
         print("  Added missing user.password_changed_at column for legacy schema")
 
 
-def _resolve_admin_accounts():
+def _resolve_admin_accounts(has_existing_admins):
     """Resolve admin accounts to seed.
 
     If ADMIN_BOOTSTRAP_PASSWORD is provided, only a single admin account is
     seeded using ADMIN_BOOTSTRAP_EMAIL (defaults to admin@example.com).
     If REQUIRE_CUSTOM_ADMIN_BOOTSTRAP is true and no custom password is set,
-    fail fast.
+    fail fast only when the database has no existing admin users.
     """
     custom_email = os.environ.get("ADMIN_BOOTSTRAP_EMAIL", "").strip()
     custom_password = os.environ.get("ADMIN_BOOTSTRAP_PASSWORD", "")
@@ -74,6 +74,9 @@ def _resolve_admin_accounts():
         return [(custom_email, custom_password)]
 
     if require_custom:
+        if has_existing_admins:
+            print("  Existing admin user found; preserving current admin credentials")
+            return []
         raise RuntimeError(
             "REQUIRE_CUSTOM_ADMIN_BOOTSTRAP=true requires ADMIN_BOOTSTRAP_PASSWORD to be set"
         )
@@ -119,7 +122,8 @@ def seed(destinations=None):
             _ensure_legacy_sqlite_schema_compatibility()
 
             # Seed admin user(s)
-            admin_accounts = _resolve_admin_accounts()
+            existing_admin_count = User.query.filter_by(is_admin=True).count()
+            admin_accounts = _resolve_admin_accounts(existing_admin_count > 0)
             for admin_email, admin_password in admin_accounts:
                 admin = User.query.filter_by(email=admin_email).first()
                 if admin:
