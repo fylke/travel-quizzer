@@ -98,7 +98,7 @@ Levels run 1 (easiest) through 5 (hardest). Current country IDs:
   docker logs travel-quizzer
   ```
 - [x] Confirm the app responds at `http://<qnap-ip>:9696` (automated health probe in deploy workflow).
-- [ ] Log in with the seeded admin account (`ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD`).
+- [x] Log in with the seeded admin account (`ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD`) when bootstrap credentials are provided (automated in deploy workflow). If the deployment preserves an existing admin because no bootstrap secret was supplied, this remains a manual verification.
 - [x] Default admin password is not used in deploy workflow (custom bootstrap password is required).
 
 ---
